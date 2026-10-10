@@ -14,7 +14,7 @@
 
 void Podo::OptionSave()
 {
-	std::ofstream fout("SavedSettingsTemp.txt", std::ios::out | std::ios::trunc);
+	std::ofstream fout("SavedSettingsTemp.txt");
 
 	if (!fout)
 	{
@@ -32,10 +32,13 @@ void Podo::OptionSave()
 
 	fout.close();
 
-	std::remove("SavedSettings.txt");
+	if (fout.fail() == true)
+	{
+		return;
+	}
 
-	int renameResult = std::rename("SavedSettingsTemp.txt", "SavedSettings.txt");
-	if (renameResult != 0)
+	BOOL moveResult = MoveFileExW(L"SavedSettingsTemp.txt", L"SavedSettings.txt", MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+	if (moveResult == 0)
 	{
 		return;
 	}
@@ -43,7 +46,7 @@ void Podo::OptionSave()
 
 void Podo::OptionRestore()
 {
-	std::ifstream fin("SavedSettings.txt", std::ios::in);
+	std::ifstream fin("SavedSettings.txt");
 
 	if (!fin)
 	{
