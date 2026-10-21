@@ -1,9 +1,9 @@
-# PodoVideoGame
-Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
+# PodoRenderer
+Win32, D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다.
 
-빛과 도시라는 소재를 윈도우 데스크톱 환경에 적합하게 담아내는 것을 목표로 합니다.
+필믹한 비주얼을 윈도우 데스크톱 환경에 담아내는 것을 목표로 합니다.
 
-현재 기초적인 조명 렌더링과 HDR 제시를 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 최적화하고 있습니다.
+현재 기초적인 조명 기능과 HDR 옵션 기능을 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 최적화하고 있습니다.
 
 <br>
 
@@ -57,13 +57,13 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
 ### 2.2. 빌드 방법
 1. 리포지토리를 다운로드합니다.
 
-2. 다운로드한 리포지토리에 포함된 `PodoVideoGame.slnx` 솔루션 파일을 더블 클릭합니다.
+2. 다운로드한 리포지토리에 포함된 `PodoRenderer.slnx` 솔루션 파일을 더블 클릭합니다.
 
 3. Visual Studio 상단의 구성을 `Release`로, 플랫폼을 `x64`로 설정합니다.  
 
 4. Visual Studio 상단에서 `빌드(B)`의 `솔루션 빌드(Ctrl+Shift+B)`를 누릅니다.
 
-5. `OutDir/PodoVideoGameRelease64.exe` 이름의 파일이 생성되었다면 빌드에 성공한 것입니다.
+5. `OutDir/PodoRendererRelease64.exe` 이름의 파일이 생성되었다면 빌드에 성공한 것입니다.
 
 <br>
 
@@ -71,7 +71,7 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
 
 
 ### 2.3. 실행 방법
-1. 위 빌드 과정을 통해 생성한 `OutDir/PodoVideoGameRelease64.exe`를 더블 클릭하여 실행합니다.
+1. 위 빌드 과정을 통해 생성한 `OutDir/PodoRendererRelease64.exe`를 더블 클릭하여 실행합니다.
 
 2. 시작 전 옵션을 설정할 수 있는 준비 화면이 나타납니다. `Start` 버튼을 눌러 시작합니다.
 
@@ -153,9 +153,9 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
 
 
 ### 4.2. 측정 방법
-1. 빌드 구성을 `Profile`로 설정한 뒤 빌드를 수행하여 `OutDir/PodoVideoGameProfile64.exe` 실행 파일을 생성합니다.
+1. 빌드 구성을 `Profile`로 설정한 뒤 빌드를 수행하여 `OutDir/PodoRendererProfile64.exe` 실행 파일을 생성합니다.
    
-2. 생성된 `OutDir/PodoVideoGameProfile64.exe` 파일을 우클릭한 뒤 관리자 권한으로 실행합니다.  
+2. 생성된 `OutDir/PodoRendererProfile64.exe` 파일을 우클릭한 뒤 관리자 권한으로 실행합니다.  
   (만일 관리자 권한으로 실행하지 않을시 PIX 측정을 시작할 수 없어, 이후 `Start` 버튼을 누르는 과정에서 오류가 발생합니다.)
 
 3. 준비 화면에서 측정 옵션을 설정합니다. 화면 모드는 전체 화면으로 설정하고, 먼저 VSync는 비활성화합니다.
@@ -164,7 +164,7 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
 
 5. 측정하고 싶은 구간이 끝나면 `End` 버튼을 눌러 캡처를 종료합니다.
 
-6. 생성된 측정 결과 파일인 `OutDir/PodoVideoGameProfile.wpix`을 더블 클릭하여 PIX에서 엽니다.
+6. 생성된 측정 결과 파일인 `OutDir/PodoRendererProfile.wpix`을 더블 클릭하여 PIX에서 엽니다.
 
 7. `Metrics` 탭을 통해 각 이벤트의 소요 시간을 분석합니다.  
   (만일 분석 이벤트가 표시되지 않을 경우, 우측의 `PIX CPU Events`와 `PIX GPU Events`의 항목을 활성화합니다.)
@@ -270,15 +270,15 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
   - NuGet 패키지 관리 (Microsoft.Direct3D.D3D12)
   
 - 복원 위치
-  - `PodoVideoGame\packages\Microsoft.Direct3D.D3D12.<버전명>`
+  - `PodoRenderer\packages\Microsoft.Direct3D.D3D12.<버전명>`
 
 - 라이선스 종류
   - MICROSOFT SOFTWARE LICENSE
   - MIT License
 
 - 라이선스 위치
-  - `PodoVideoGame\packages\Microsoft.Direct3D.D3D12.<버전명>\LICENSE.txt`
-  - `PodoVideoGame\packages\Microsoft.Direct3D.D3D12.<버전명>\LICENSE-CODE.txt`
+  - `PodoRenderer\packages\Microsoft.Direct3D.D3D12.<버전명>\LICENSE.txt`
+  - `PodoRenderer\packages\Microsoft.Direct3D.D3D12.<버전명>\LICENSE-CODE.txt`
 
 <br>
 
@@ -293,13 +293,13 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
   - NuGet 패키지 관리 (directxtk12_desktop_win10)
 
 - 복원 위치
-  - `PodoVideoGame\packages\directxtk12_desktop_win10.<버전명>`
+  - `PodoRenderer\packages\directxtk12_desktop_win10.<버전명>`
 
 - 라이선스 종류
   - MIT License
 
 - 라이선스 위치
-  - `PodoVideoGame\packages\directxtk12_desktop_win10.<버전명>\docs\README.md` 내부 간접 링크
+  - `PodoRenderer\packages\directxtk12_desktop_win10.<버전명>\docs\README.md` 내부 간접 링크
   - `https://github.com/microsoft/DirectXTK12/blob/main/LICENSE`
 
 <br>
@@ -315,13 +315,13 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
   - NuGet 패키지 관리 (WinPixEventRuntime)
   
 - 복원 위치
-  - `PodoVideoGame\packages\WinPixEventRuntime.<버전명>`
+  - `PodoRenderer\packages\WinPixEventRuntime.<버전명>`
 
 - 라이선스 종류
   - MIT License
 
 - 라이선스 위치
-  - `PodoVideoGame\packages\WinPixEventRuntime.<버전명>\license.txt`
+  - `PodoRenderer\packages\WinPixEventRuntime.<버전명>\license.txt`
 
 <br>
 
@@ -333,8 +333,8 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
   - 옵션 GUI 제공
 
 - 사용 방식
-  - 리포지토리 내부에 직접 포함함(`PodoVideoGame\External\imgui`)
-  - 예제 코드의 일부를 수정하여 사용함(`PodoVideoGame\Code\Header\Alloc.h`)
+  - 리포지토리 내부에 직접 포함함(`PodoRenderer\External\imgui`)
+  - 예제 코드의 일부를 수정하여 사용함(`PodoRenderer\Code\Header\Alloc.h`)
 
 - 원본 리포지토리
   - ocornut/imgui  
@@ -344,7 +344,7 @@ Win32, D3D12를 이용하여 구현 중인 비디오 게임입니다.
   - MIT License
 
 - 라이선스 위치
-  - `PodoVideoGame\External\imgui\LICENSE.txt`
+  - `PodoRenderer\External\imgui\LICENSE.txt`
 
 <br>
 

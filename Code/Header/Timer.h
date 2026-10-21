@@ -14,13 +14,11 @@ public:
 		Reset();
 	}
 
+	Timer(const Timer& sourceTimer) = default;
+	Timer(Timer&& sourceTimer) noexcept = default;
+	Timer& operator = (const Timer& sourceTimer) = default;
+	Timer& operator = (Timer&& sourceTimer) noexcept = default;
 	~Timer() = default;
-
-	//NOTE: 타이머 객체의 복사 또는 이동을 허용하지 않도록 함
-	Timer(const Timer& sourceTimer) = delete;
-	Timer(Timer&& sourceTimer) noexcept = delete;
-	Timer& operator = (const Timer& sourceTimer) = delete;
-	Timer& operator = (Timer&& sourceTimer) noexcept = delete;
 	
 	void Reset()
 	{

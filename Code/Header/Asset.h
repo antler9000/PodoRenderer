@@ -35,6 +35,7 @@ public:
 	Asset() = default;
 	Asset(Asset&& sourceAsset) noexcept = default;
 	Asset& operator=(Asset&& sourceAsset) noexcept = default;
+	~Asset() = default;
 
 	//NOTE: 의도치 않은 얕은 복사나 참조 증가가 일어나지 않도록 복사를 금지함
 	Asset(const Asset& sourceAsset) = delete;

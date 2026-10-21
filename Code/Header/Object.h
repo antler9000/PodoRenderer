@@ -29,6 +29,7 @@ public:
 	Object() = default;
 	Object(Object&& sourceObject) noexcept = default;
 	Object& operator=(Object&& sourceObject) noexcept = default;
+	~Object() = default;
 
 	//NOTE: 의도치 않은 얕은 복사나 참조 증가가 일어나지 않도록 복사를 금지함
 	Object(const Object& sourceObject) = delete;

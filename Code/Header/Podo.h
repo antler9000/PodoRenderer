@@ -38,7 +38,7 @@ class Podo : public BaseApp<Podo>
 {
 public:
 
-	Podo(HINSTANCE hInstance, int nCmdShow) : BaseApp(L"Podo Video Game", hInstance, nCmdShow)
+	Podo(HINSTANCE hInstance, int nCmdShow) : BaseApp(L"Podo Renderer", hInstance, nCmdShow)
 	{
 		OptionRestore();
 

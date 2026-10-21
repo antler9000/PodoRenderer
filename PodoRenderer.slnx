@@ -6,5 +6,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="PodoVideoGame.vcxproj" Id="24d87977-50ca-4175-b91c-9209c7e1cd21" />
+  <Project Path="PodoRenderer.vcxproj" Id="24d87977-50ca-4175-b91c-9209c7e1cd21" />
 </Solution>
