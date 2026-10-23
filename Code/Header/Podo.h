@@ -162,6 +162,10 @@ private:
 	static constexpr	UINT							m_descriptorHeapCBVSRVUAVCapacityForGUI		= 64;
 	static constexpr	UINT							m_descriptorHeapCBVSRVUAVCapacityForRender	= 64;
 
+	static constexpr	ImVec2							m_imGuiSpacingBasicSize						= ImVec2(0.0f, 10.0f);
+	static constexpr	ImVec2							m_imGuiSmallButtonBasicSize					= ImVec2(120.0f, 40.0f);
+	static constexpr	ImVec2							m_imGuiMediumButtonBasicSize				= ImVec2(240.0f, 40.0f);
+	static constexpr	ImVec2							m_imGuiLargeButtonBasicSize					= ImVec2(360.0f, 40.0f);
 	static constexpr	ImGuiWindowFlags				m_imGuiBasicFlag							= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
 																									| ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
@@ -245,11 +249,6 @@ private:
 	Timer									m_worldTimerFrame;
 
 	EngineState								m_engineState										= ENGINE_STATE_PREPARE;
-
-	ImVec2									m_imGuiSpacingSize									= ImVec2(0.0f, 10.0f);
-	ImVec2									m_imGuiSmallButtonSize								= ImVec2(120.0f, 40.0f);
-	ImVec2									m_imGuiMediumButtonSize								= ImVec2(240.0f, 40.0f);
-	ImVec2									m_imGuiLargeButtonSize								= ImVec2(360.0f, 40.0f);
 
 private:
 

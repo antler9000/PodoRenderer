@@ -296,11 +296,6 @@ void Podo::UpdateGUI()
 	ImGuiViewport* pImGuiViewPort = ImGui::GetMainViewport();
 	ImVec2 imGuiCenterPos = pImGuiViewPort->GetCenter();
 
-	m_imGuiSpacingSize		= ImVec2(0.0f, 10.0f) * m_optionGUI.GetMasterScale();
-	m_imGuiSmallButtonSize	= ImVec2(120.0f, 40.0f) * m_optionGUI.GetMasterScale();
-	m_imGuiMediumButtonSize	= ImVec2(240.0f, 40.0f) * m_optionGUI.GetMasterScale();
-	m_imGuiLargeButtonSize	= ImVec2(360.0f, 40.0f) * m_optionGUI.GetMasterScale();
-
 	switch (m_engineState)
 	{
 		case ENGINE_STATE_PREPARE:
@@ -329,7 +324,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 
 	ImGui::Begin("Prepare", nullptr, m_imGuiBasicFlag);
 
-	bool backButtonClicked = ImGui::Button("Start", m_imGuiSmallButtonSize);
+	bool backButtonClicked = ImGui::Button("Start", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	if (backButtonClicked == true)
 	{
 		m_engineState = ENGINE_STATE_RUN;
@@ -354,7 +349,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 
 	ImGui::SameLine();
 
-	bool exitToWindowButtonClicked = ImGui::Button("Exit", m_imGuiSmallButtonSize);
+	bool exitToWindowButtonClicked = ImGui::Button("Exit", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	if (exitToWindowButtonClicked == true)
 	{
 		DestroyWindow(m_hWnd);
@@ -365,7 +360,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	bool	previousHDRState		= m_optionHDR.IsActive();
 	int		previousGUIState		= m_optionGUI.masterSize;
 
-	ImGui::Dummy(m_imGuiSpacingSize);
+	ImGui::Dummy(m_imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
 
 	{
 		ImGui::Text("Display");
@@ -381,7 +376,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 		ImGui::EndDisabled();
 	}
 
-	ImGui::Dummy(m_imGuiSpacingSize);
+	ImGui::Dummy(m_imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
 	ImGui::Separator();
 
 	{
@@ -424,7 +419,7 @@ void Podo::UpdateRunStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPo
 
 	ImGui::Begin("Runtime", nullptr, loadingGuiFlag);
 
-	bool menuButtonClicked	= ImGui::Button("End", m_imGuiSmallButtonSize);
+	bool menuButtonClicked	= ImGui::Button("End", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	bool escKeyPressed		= ImGui::IsKeyPressed(ImGuiKey_Escape, false);
 	if (menuButtonClicked == true || escKeyPressed == true)
 	{
