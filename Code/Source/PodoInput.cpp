@@ -65,7 +65,10 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			m_needResetFactory = true;
 
-			SaveWindow();
+			if (m_optionFullScreen.IsActive() == false)
+			{
+				m_optionWindowSave.SetWindowRect(m_hWnd);
+			}
 
 			return 0;
 		}
@@ -95,7 +98,10 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			m_needResetFactory = true;
 
-			SaveWindow();
+			if (m_optionFullScreen.IsActive() == false)
+			{
+				m_optionWindowSave.SetWindowRect(m_hWnd);
+			}
 
 			return 0;
 		}
@@ -111,7 +117,10 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 			m_needResetFactory = true;
 
-			SaveWindow();
+			if (m_optionFullScreen.IsActive() == false)
+			{
+				m_optionWindowSave.SetWindowRect(m_hWnd);
+			}
 
 			return 0;
 		}

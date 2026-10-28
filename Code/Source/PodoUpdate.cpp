@@ -338,7 +338,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 		ThrowIfNull(PIXLoadLatestWinPixTimingCapturerLibrary());
 
 		PIXCaptureParameters captureParameters = {};
-		captureParameters.TimingCaptureParameters.FileName				= L"PodoVideoEngineProfile.wpix";
+		captureParameters.TimingCaptureParameters.FileName				= L"PodoRendererProfile.wpix";
 		captureParameters.TimingCaptureParameters.CaptureCpuSamples		= true;
 		captureParameters.TimingCaptureParameters.CpuSamplesPerSecond	= 4000;
 		captureParameters.TimingCaptureParameters.CaptureGpuTiming		= true;
@@ -403,7 +403,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	}
 	if (previousGUIState != nowGUIState)
 	{
-		//TODO: PSO 초기화는 하지 않도록 초기화 단계를 분할하기
+		//TODO: PSO 초기화와 GUI 초기화 요청 분할 후 반영하기
 		m_needResetRenderConfigure = true;
 	}
 

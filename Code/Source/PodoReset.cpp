@@ -23,6 +23,7 @@
 #include <d3dx12_root_signature.h>
 #include <d3dx12_default.h>
 #include <d3dx12_core.h>
+#include <d3d12sdklayers.h>
 #include <d3d12.h>
 #include <d3dcommon.h>
 #include <d3dcompiler.h>
@@ -57,16 +58,18 @@ void Podo::Reset()
 
 	if (NeedResetScreenMode() == true)
 	{
+		m_needResetScreenMode = false;
+
 		ResetScreenMode();
 
 		m_needResetFactory		= true;
 		m_needResetSwapChain	= true;
-
-		m_needResetScreenMode	= false;
 	}
 
 	if (NeedResetFactory() == true)
 	{
+		m_needResetFactory = false;
+
 		ResetFactory();
 		ResetAdapterAndOutput();
 
@@ -74,12 +77,12 @@ void Podo::Reset()
 		m_needResetDevice		= true;
 		//TODO: 아웃풋이 안 바뀌었으면 요청 생략하도록 곤치기
 		m_needResetSwapChain	= true;
-
-		m_needResetFactory		= false;
 	}
 
 	if (NeedResetDevice() == true)
 	{
+		m_needResetDevice = false;
+
 		ResetDevice();
 		ResetFence();
 		ResetFenceEvent();
@@ -94,12 +97,12 @@ void Podo::Reset()
 		m_needResetSwapChain		= true;
 		m_needResetWorkload			= true;
 		m_needResetRenderConfigure	= true;
-
-		m_needResetDevice			= false;
 	}
 	
 	if (NeedResetSwapChain() == true)
 	{
+		m_needResetSwapChain = false;
+
 		ResetHDRSwapChainSupport();
 		ResetSwapChain();
 		ResetBackBufferInfo();
@@ -112,28 +115,27 @@ void Podo::Reset()
 
 		//TODO: RTV 포맷이 안 바뀌었으면 요청 생략하도록 곤치기
 		m_needResetRenderConfigure	= true;
-
-		m_needResetSwapChain		= false;
 	}
 
 	if (NeedResetWorkload() == true)
 	{
+		m_needResetWorkload = false;
+
 		ResetAssets();
 		ResetObjects();
 		ResetCamera();
 
 		ResetCBVSRVUAV();
-
-		m_needResetWorkload = false;
 	}
 
 	if (NeedResetRenderConfigure() == true)
 	{
+		m_needResetRenderConfigure = false;
+
+		//TODO: PSO 초기화와 GUI 초기화 요청을 분할하기
 		ResetRootSignature();
 		ResetPipelineStateObject();
 		ResetImGui();
-
-		m_needResetRenderConfigure = false;
 	}
 
 	m_optionFullScreen.DebugPrint();

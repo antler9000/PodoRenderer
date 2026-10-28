@@ -135,13 +135,11 @@ private:
 
 private:
 
+	void FlushCommandQueue();
 	void OptionSave();
 	void OptionRestore();
 	bool OptionReadBool(std::ifstream& fin, std::string optionName, bool& outOptionEnabled);
 	bool OptionReadInt(std::ifstream& fin, std::string optionName, int& outOptionValue);
-
-	void FlushCommandQueue();
-	void SaveWindow();
 
 private:
 

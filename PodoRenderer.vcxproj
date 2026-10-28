@@ -51,11 +51,10 @@
   <ItemGroup>
     <ClCompile Include="Code\Source\main.cpp" />
     <ClCompile Include="Code\Source\PodoInput.cpp" />
-    <ClCompile Include="Code\Source\PodoOption.cpp" />
     <ClCompile Include="Code\Source\PodoClose.cpp" />
     <ClCompile Include="Code\Source\PodoUpdate.cpp" />
     <ClCompile Include="Code\Source\PodoReset.cpp" />
-    <ClCompile Include="Code\Source\PodoUtil.cpp" />
+    <ClCompile Include="Code\Source\PodoUtility.cpp" />
     <ClCompile Include="External\imgui\backends\imgui_impl_dx12.cpp" />
     <ClCompile Include="External\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="External\imgui\imgui.cpp" />

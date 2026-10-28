@@ -1,6 +1,9 @@
 ﻿#pragma once
 #define NOMINMAX
 
+//Podo
+#include "Debug.h"
+
 //Win32
 #include <windows.h>
 
@@ -61,12 +64,15 @@ struct OptionWindowSave
 		return true;
 	}
 
-	void SetWindowRect(RECT setting)
+	void SetWindowRect(HWND hWnd)
 	{
-		LONG newPosX	= setting.left;
-		LONG newPosY	= setting.top;
-		LONG newWidth	= setting.right - setting.left;
-		LONG newHeight	= setting.bottom - setting.top;
+		RECT windowRect = {};
+		ThrowIfFalse(GetWindowRect(hWnd, &windowRect));
+
+		LONG newPosX	= windowRect.left;
+		LONG newPosY	= windowRect.top;
+		LONG newWidth	= windowRect.right - windowRect.left;
+		LONG newHeight	= windowRect.bottom - windowRect.top;
 
 		if ((10 < newWidth) && (10 < newHeight))
 		{
