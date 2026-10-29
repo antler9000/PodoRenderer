@@ -30,7 +30,7 @@ void Podo::CloseImGui()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	m_imGuiDescriptorHeapAllocator.Destroy();
+	m_renderConfigureImGuiDescriptorHeapAllocator.Destroy();
 
 	m_renderConfigureImGuiInitialized = false;
 }

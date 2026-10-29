@@ -946,21 +946,26 @@ void Podo::ResetImGui()
 {
 	CloseImGui();
 
-	m_imGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), m_descriptorHeapCBVSRVUAVCapacityForGUI);
+	m_renderConfigureImGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), m_descriptorHeapCBVSRVUAVCapacityForGUI);
 
 	ImGui_ImplDX12_InitInfo initInfo = {};
 	initInfo.Device				= m_device.Get();
 	initInfo.CommandQueue		= m_commandQueue.Get();
 	initInfo.NumFramesInFlight	= 1;
 	initInfo.RTVFormat			= m_optionHDR.IsActive() ? m_screenRTVFormatHDR : m_screenRTVFormatSDR;
+	initInfo.UserData			= &m_renderConfigureImGuiDescriptorHeapAllocator;
 	initInfo.SrvDescriptorHeap = m_descriptorHeapCBVSRVUAV.Get();
-	initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle)
+	initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* pInitInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle)
 		{
-			return m_imGuiDescriptorHeapAllocator.Alloc(pOutCpuHandle, outGpuHandle);
+			ImGuiDescriptorHeapAllocator* allocator = static_cast<ImGuiDescriptorHeapAllocator*>(pInitInfo->UserData);
+
+			return allocator->Alloc(pOutCpuHandle, outGpuHandle);
 		};
-	initInfo.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
+	initInfo.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo* pInitInfo, D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle)
 		{
-			return m_imGuiDescriptorHeapAllocator.Free(cpuHandle, gpuHandle);
+			ImGuiDescriptorHeapAllocator* allocator = static_cast<ImGuiDescriptorHeapAllocator*>(pInitInfo->UserData);
+
+			return allocator->Free(cpuHandle, gpuHandle);
 		};
 
 	IMGUI_CHECKVERSION();

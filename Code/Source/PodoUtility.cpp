@@ -41,14 +41,14 @@ void Podo::OptionSave()
 		return;
 	}
 
-	fout << "FullScreen" << " " << (m_optionFullScreen.userEnabled ? "Yes" : "No") << '\n';
-	fout << "WindowSavePosX" << " " << ((int)m_optionWindowSave.posX) << '\n';
-	fout << "WindowSavePosY" << " " << ((int)m_optionWindowSave.posY) << '\n';
-	fout << "WindowSaveWidth" << " " << ((int)m_optionWindowSave.width) << '\n';
-	fout << "WindowSaveHeight" << " " << ((int)m_optionWindowSave.height) << '\n';
-	fout << "VSync" << " " << (m_optionVSync.userEnabled ? "Yes" : "No") << '\n';
-	fout << "HDR" << " " << (m_optionHDR.userEnabled ? "Yes" : "No") << '\n';
-	fout << "GUIMasterSize" << " " << (m_optionGUI.masterSize) << '\n';
+	fout << "FullScreen"		<< " " << (m_optionFullScreen.userEnabled ? "Yes" : "No")	<< '\n';
+	fout << "WindowSavePosX"	<< " " << ((int)m_optionWindowSave.posX)					<< '\n';
+	fout << "WindowSavePosY"	<< " " << ((int)m_optionWindowSave.posY)					<< '\n';
+	fout << "WindowSaveWidth"	<< " " << ((int)m_optionWindowSave.width)					<< '\n';
+	fout << "WindowSaveHeight"	<< " " << ((int)m_optionWindowSave.height)					<< '\n';
+	fout << "VSync"				<< " " << (m_optionVSync.userEnabled ? "Yes" : "No")		<< '\n';
+	fout << "HDR"				<< " " << (m_optionHDR.userEnabled ? "Yes" : "No")			<< '\n';
+	fout << "GUIMasterSize"		<< " " << (m_optionGUI.masterSize)							<< '\n';
 
 	fout.close();
 
@@ -98,14 +98,14 @@ void Podo::OptionRestore()
 		return;
 	}
 
-	m_optionFullScreen.userEnabled = fullScreenEnabledTemp;
-	m_optionWindowSave.posX = (LONG)windowSavePosXTemp;
-	m_optionWindowSave.posY = (LONG)windowSavePosYTemp;
-	m_optionWindowSave.width = (LONG)windowSaveWidthTemp;
-	m_optionWindowSave.height = (LONG)windowSaveHeightTemp;
-	m_optionVSync.userEnabled = vSyncEnabledTemp;
-	m_optionHDR.userEnabled = hdrEnabledTemp;
-	m_optionGUI.masterSize = std::clamp(guiMasterSizeTemp, 50, 150);
+	m_optionFullScreen.userEnabled	= fullScreenEnabledTemp;
+	m_optionWindowSave.posX			= (LONG)windowSavePosXTemp;
+	m_optionWindowSave.posY			= (LONG)windowSavePosYTemp;
+	m_optionWindowSave.width		= (LONG)windowSaveWidthTemp;
+	m_optionWindowSave.height		= (LONG)windowSaveHeightTemp;
+	m_optionVSync.userEnabled		= vSyncEnabledTemp;
+	m_optionHDR.userEnabled			= hdrEnabledTemp;
+	m_optionGUI.masterSize			= std::clamp(guiMasterSizeTemp, 50, 150);
 }
 
 bool Podo::OptionReadBool(std::ifstream& fin, std::string optionName, bool& outOptionEnabled)

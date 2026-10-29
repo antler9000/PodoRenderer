@@ -143,11 +143,6 @@ private:
 
 private:
 
-	//NOTE: ImGui에 넘겨주는 콜백 함수 속에서 기능해야 하므로 static으로 둠
-	static inline		ImGuiDescriptorHeapAllocator	m_imGuiDescriptorHeapAllocator				= {};
-
-private:
-
 	static constexpr	UINT							m_screenBackBufferCount						= 2;
 	static constexpr	DXGI_FORMAT						m_screenBackBufferFormatSDR					= DXGI_FORMAT_R8G8B8A8_UNORM;
 	static constexpr	DXGI_FORMAT						m_screenBackBufferFormatHDR					= DXGI_FORMAT_R10G10B10A2_UNORM;
@@ -218,6 +213,7 @@ private:
 	ComPtr<ID3D12RootSignature>				m_renderConfigureRootSignature;
 	ComPtr<ID3D12PipelineState>				m_renderConfigurePipelineStateObject;
 	bool									m_renderConfigureImGuiInitialized					= false;
+	ImGuiDescriptorHeapAllocator			m_renderConfigureImGuiDescriptorHeapAllocator		= {};
 
 	bool									NeedReset() const									{ return (NeedResetScreenMode() || NeedResetFactory() || NeedResetDevice() || NeedResetSwapChain() || NeedResetWorkload() || NeedResetRenderConfigure()); }
 	bool									NeedResetScreenMode() const							{ return m_needResetScreenMode; }
