@@ -354,13 +354,10 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 <!---------------------------------------------------------------------------------------------------------------------------------------------->
 ## 7. 구현 참고
 ### 7.1. Win32 관련
-"Get Started with Win32 and C++" (Microsoft Learn / 2026년 6월 열람)  
+"Get Started with Win32 and C++" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/learnwin32/learn-to-program-for-windows](https://learn.microsoft.com/en-us/windows/win32/learnwin32/learn-to-program-for-windows)
 
-"ComPtr" (Microsoft / 2026년 7월 열람)  
-[https://github.com/Microsoft/DirectXTK/wiki/ComPtr](https://github.com/Microsoft/DirectXTK/wiki/ComPtr)
-
-"Setting the default DPI awareness for a process" (Microsoft Learn / 2026년 7월 열람)  
+"Setting the default DPI awareness for a process" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process](https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process)
 
 <br>
@@ -371,22 +368,49 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 ### 7.2. DirectX 12 관련
 "Introduction To 3D Game Programming With DirectX 12 Second Edition" (Frank D. Luna 지음 / Mercury Learning And Information 출판 / 2025년 발행) 
 
+"Graphics APIs in Windows" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows/win32/direct3darticles/graphics-apis-in-windows-vista](https://learn.microsoft.com/en-us/windows/win32/direct3darticles/graphics-apis-in-windows-vista) 
+
+"WDDM architecture" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows-hardware/drivers/display/windows-vista-and-later-display-driver-model-architecture](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/windows-vista-and-later-display-driver-model-architecture)
+
+"Benefits of the WDDM" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows-hardware/drivers/display/benefits-of-the-windows-vista-and-later-display-driver-model](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/benefits-of-the-windows-vista-and-later-display-driver-model)
+
 <br>
 
 
 
 
-### 7.3. 제시 관련
-"DXGI flip model" (Microsoft / 2026년 9월 열람)  
+### 7.3. 초기화 관련
+"ComPtr" (Microsoft / 2026년 10월 열람)  
+[https://github.com/Microsoft/DirectXTK/wiki/ComPtr](https://github.com/Microsoft/DirectXTK/wiki/ComPtr)
+
+"Programming DirectX with COM" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows/win32/prog-dx-with-com](https://learn.microsoft.com/en-us/windows/win32/prog-dx-with-com)
+
+"Hardware Feature Levels" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels](https://learn.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels)
+
+"Anatomy of Direct3D 12 Create Device" (Chuck Walbourn / 2026년 10월 열람)  
+[https://walbourn.github.io/anatomy-of-direct3d-12-create-device/](https://walbourn.github.io/anatomy-of-direct3d-12-create-device/)
+
+<br>
+
+
+
+
+### 7.4. 제시 관련
+"DXGI flip model" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/dxgi-flip-model](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/dxgi-flip-model)
 
-"For best performance, use DXGI flip model" (Microsoft / 2026년 9월 열람)  
+"For best performance, use DXGI flip model" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/for-best-performance--use-dxgi-flip-model](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/for-best-performance--use-dxgi-flip-model)
 
-"DirectX 12: Presentation Modes In Windows 10" (Microsoft DirectX 12 and Graphics Education / 2026년 9월 열람)  
+"DirectX 12: Presentation Modes In Windows 10" (Microsoft DirectX 12 and Graphics Education / 2026년 10월 열람)  
 [https://youtu.be/E3wTajGZOsA?si=todYm9imRjgSOXju](https://youtu.be/E3wTajGZOsA?si=todYm9imRjgSOXju)
 
-"The Care and Feeding of Modern Swap Chains" (Chuck Walbourn / 2026년 7월 열람)  
+"The Care and Feeding of Modern Swap Chains" (Chuck Walbourn / 2026년 10월 열람)  
 [https://walbourn.github.io/care-and-feeding-of-modern-swapchains](https://walbourn.github.io/care-and-feeding-of-modern-swapchains)  
 [https://walbourn.github.io/care-and-feeding-of-modern-swap-chains-2](https://walbourn.github.io/care-and-feeding-of-modern-swap-chains-2)  
 [https://walbourn.github.io/care-and-feeding-of-modern-swap-chains-3](https://walbourn.github.io/care-and-feeding-of-modern-swap-chains-3)
@@ -396,8 +420,8 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 
 
 
-### 7.4. VRR 옵션 관련
-"Variable refresh rate displays" (Microsoft / 2026년 9월 열람)  
+### 7.5. VRR 옵션 관련
+"Variable refresh rate displays" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/variable-refresh-rate-displays](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/variable-refresh-rate-displays)
 
 <br>
@@ -405,25 +429,25 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 
 
 
-### 7.5. HDR 옵션 관련
-"Use DirectX with Advanced Color on high/standard dynamic range displays" (Microsoft / 2026년 9월 열람)  
-[https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range](https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range)
-
-"Linear-Space Lighting (i.e. Gamma)" (Flimic Worlds / 2026년 9월 열람)  
+### 7.6. HDR 옵션 관련
+"Linear-Space Lighting (i.e. Gamma)" (Flimic Worlds / 2026년 10월 열람)  
 [https://filmicworlds.com/blog/linear-space-lighting-i-e-gamma/](https://filmicworlds.com/blog/linear-space-lighting-i-e-gamma/)
 
-"Gamma-correct rendering" (Molecular Musings / 2026년 9월 열람)  
+"Gamma-correct rendering" (Molecular Musings / 2026년 10월 열람)  
 [https://blog.molecular-matters.com/2011/11/21/gamma-correct-rendering/](https://blog.molecular-matters.com/2011/11/21/gamma-correct-rendering/)
 
-"Converting data for the color space" (Microsoft / 2026년 9월 열람)  
+"Converting data for the color space" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/converting-data-color-space](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/converting-data-color-space)
+
+"Use DirectX with Advanced Color on high/standard dynamic range displays" (Microsoft Learn / 2026년 10월 열람)  
+[https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range](https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range)
 
 <br>
 
 
 
 
-### 7.6. 빌드 관련
+### 7.7. 빌드 관련
 "Link an executable to a DLL" (Microsoft Learn / 2026년 7월 열람)  
 [https://learn.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=msvc-170](https://learn.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=msvc-170)
 
@@ -435,7 +459,7 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 
 
 
-### 7.7. 측정 관련
+### 7.8. 측정 관련
 "PresentMon" (GameTechDev / 2026년 7월 열람)  
 [https://github.com/GameTechDev/PresentMon](https://github.com/GameTechDev/PresentMon)
 
