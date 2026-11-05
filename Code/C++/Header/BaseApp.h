@@ -45,15 +45,15 @@ protected:
 
 protected:
 
-	const wchar_t*		m_pAppName		= nullptr;
+	const wchar_t*	m_pAppName	= {};
 
-	HINSTANCE			m_hInstance		= nullptr;
-	HWND				m_hWnd			= nullptr;
+	HINSTANCE		m_hInstance	= {};
+	HWND			m_hWnd		= {};
 
 private:
 
-	//NOTE:	static 메서드는 객체에 얽힌 메서드가 아니기에 this가 없으므로, 멤버 변수에 접근할 수가 없다는 문제가 생김
-	//			이를 해결하기 위해 CreatWindowEx의 마지막 매개변수, SetWindowLongPtr 함수, GetWindowLongPtr 함수를 이용함
+	//NOTE:	static 메서드는 객체에 얽힌 메서드가 아니기에 this가 없으므로, 멤버 변수에 접근할 수가 없음
+	//		이를 해결하기 위해 CreatWindowEx의 마지막 매개변수, SetWindowLongPtr 함수, GetWindowLongPtr 함수를 이용함
 	static LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		DerivedApp* pThis = nullptr;
@@ -114,7 +114,7 @@ private:
 			nullptr,
 			nullptr,
 			m_hInstance,
-			(LPVOID)pThis	//NOTE: WindowProcedure에서 이 객체에 접근할 수 있도록 하기 위한 단계 중 하나임
+			(LPVOID)pThis	//NOTE: WindowProcedure에서 이 객체에 접근할 수 있도록 하기 위함
 		);
 
 		ThrowIfNull(m_hWnd);

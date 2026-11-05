@@ -14,10 +14,14 @@
 
 //C++
 #include <cstring>
+#include <cstdint>
 
+//NOTE: C++의 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 struct CameraConstantBuffer
 {
-	DirectX::XMFLOAT4X4 viewProjMatrix;
+	DirectX::XMFLOAT3	eyePos			= {};
+	std::uint32_t		padding			= {};
+	DirectX::XMFLOAT4X4 viewProjMatrix	= {};
 };
 
 class Camera
@@ -33,15 +37,15 @@ public:
 	Camera(const Camera& sourceCamera) = delete;
 	Camera& operator=(const Camera& sourceCamera) = delete;
 
-	void Create(ID3D12Device* device)
+	void Create(ID3D12Device* pDevice)
 	{
-		constexpr UINT			constantBufferSize = (sizeof(CameraConstantBuffer) + 255) & ~255;
-		D3D12_HEAP_PROPERTIES	heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		D3D12_RESOURCE_DESC		resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		constexpr UINT			constantBufferSize	= (sizeof(CameraConstantBuffer) + 255) & ~255;
+		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
 		ThrowIfFailed
 		(
-			device->CreateCommittedResource
+			pDevice->CreateCommittedResource
 			(
 				&heapProperties,
 				D3D12_HEAP_FLAG_NONE,
@@ -55,6 +59,7 @@ public:
 		UpdateCameraConstantBuffer(1.0f);
 	}
 
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
 	void SetPosition(DirectX::XMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
@@ -83,14 +88,15 @@ public:
 
 		DirectX::XMMATRIX viewProjMatrix = viewMatrix * projectionMatrix;
 
-		CameraConstantBuffer cameraConstantBufferData;
+		CameraConstantBuffer cameraConstantBufferData = {};
+		DirectX::XMStoreFloat3(&cameraConstantBufferData.eyePos, position);
 		DirectX::XMStoreFloat4x4(&cameraConstantBufferData.viewProjMatrix, DirectX::XMMatrixTranspose(viewProjMatrix));
 
-		void* mappedData = nullptr;
+		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_cameraConstantBuffer->Map(0, &readRange, &mappedData));
-		std::memcpy(mappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
+		ThrowIfFailed(m_cameraConstantBuffer->Map(0, &readRange, &pMappedData));
+		std::memcpy(pMappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
 		m_cameraConstantBuffer->Unmap(0, nullptr);
 	}
 
@@ -101,9 +107,9 @@ public:
 
 private:
 
-	DirectX::XMFLOAT3 m_position	= { 0.0f, 0.0f, 0.0f };
-	DirectX::XMFLOAT3 m_target		= { 0.0f, 0.0f, 1.0f };
+	DirectX::XMFLOAT3 m_position	= { 0.0f, 5.0f, -5.0f };
+	DirectX::XMFLOAT3 m_target		= { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT3 m_upDirection	= { 0.0f, 1.0f, 0.0f };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraConstantBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraConstantBuffer = {};
 };

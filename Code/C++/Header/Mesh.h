@@ -21,29 +21,29 @@
 #include <utility>
 #include <cstdint>
 
+//NOTE: 셰이더 정점은 입력 서명에서 각 성분의 오프셋을 지정하므로, 셰이더 상수 버퍼와 달리 패딩을 추가할 필요가 없음
 struct Vertex
 {
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 normal;
-	DirectX::XMFLOAT3 color;
+	DirectX::XMFLOAT3 pos		= {};
+	DirectX::XMFLOAT3 normal	= {};
 };
 
-class Asset
+class Mesh
 {
 public:
 
-	Asset() = default;
-	Asset(Asset&& sourceAsset) noexcept = default;
-	Asset& operator=(Asset&& sourceAsset) noexcept = default;
-	~Asset() = default;
+	Mesh() = default;
+	Mesh(Mesh&& sourceMesh) noexcept = default;
+	Mesh& operator=(Mesh&& sourceMesh) noexcept = default;
+	~Mesh() = default;
 
 	//NOTE: 의도치 않은 얕은 복사나 참조 증가가 일어나지 않도록 복사를 금지함
-	Asset(const Asset& sourceAsset) = delete;
-	Asset& operator=(const Asset& sourceAsset) = delete;
+	Mesh(const Mesh& sourceMesh) = delete;
+	Mesh& operator=(const Mesh& sourceMesh) = delete;
 
 	void Create
 	(
-		ID3D12Device* device,
+		ID3D12Device* pDevice,
 		DirectX::ResourceUploadBatch& resourceUpload,
 		std::vector<Vertex>&& vertices,
 		std::vector<uint32_t>&& indices
@@ -56,7 +56,7 @@ public:
 		(
 			DirectX::CreateStaticBuffer
 			(
-				device,
+				pDevice,
 				resourceUpload,
 				std::move(vertices),
 				D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
@@ -67,7 +67,7 @@ public:
 		(
 			DirectX::CreateStaticBuffer
 			(
-				device,
+				pDevice,
 				resourceUpload,
 				std::move(indices),
 				D3D12_RESOURCE_STATE_INDEX_BUFFER,
@@ -121,11 +121,11 @@ public:
 
 private:
 
-	UINT m_vertexCount	= 0;
-	UINT m_indexCount	= 0;
+	UINT m_vertexCount	= {};
+	UINT m_indexCount	= {};
 
-	Microsoft::WRL::ComPtr<ID3D12Resource>	m_vertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D12Resource>	m_indexBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource>	m_vertexBuffer	= {};
+	Microsoft::WRL::ComPtr<ID3D12Resource>	m_indexBuffer	= {};
 
 	D3D12_VERTEX_BUFFER_VIEW	m_vertexBufferView	= {};
 	D3D12_INDEX_BUFFER_VIEW		m_indexBufferView	= {};

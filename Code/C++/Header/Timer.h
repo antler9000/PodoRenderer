@@ -89,12 +89,12 @@ private:
 	using Duration		= std::chrono::steady_clock::duration;
 	using DurationMilli	= std::chrono::duration<double, std::milli>;
 
-	bool m_isStopped;
+	bool m_isStopped = {};
 
-	TimePoint m_timePointStarted;
-	TimePoint m_timePointStopped;
-	TimePoint m_timePointCurrent;
+	TimePoint m_timePointStarted = {};
+	TimePoint m_timePointStopped = {};
+	TimePoint m_timePointCurrent = {};
 
-	Duration m_timePaused;
-	Duration m_timeElapsed;
+	Duration m_timePaused	= {};
+	Duration m_timeElapsed	= {};
 }; 
