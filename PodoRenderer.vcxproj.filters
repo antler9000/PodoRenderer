@@ -13,17 +13,29 @@
     <Filter Include="External\imgui\backends">
       <UniqueIdentifier>{4aaacdae-9477-44f9-b051-38413a2a267f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shader">
-      <UniqueIdentifier>{45413b6b-9fad-4568-af54-541dc492864a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Texture">
       <UniqueIdentifier>{47c8c5eb-a5e8-46ed-bb4d-1b3ea26d457f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Code\Header">
+    <Filter Include="Code\C++">
+      <UniqueIdentifier>{ffe0b3e2-e3c8-4038-9633-ac500c3f2f56}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\C++\Header">
       <UniqueIdentifier>{0ef0dd21-b0ad-44e4-a1b7-d88cf503816b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Code\Source">
+    <Filter Include="Code\C++\Source">
       <UniqueIdentifier>{31c5ccac-c2c9-4dbd-8326-a3c88b601a47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\HLSL">
+      <UniqueIdentifier>{45413b6b-9fad-4568-af54-541dc492864a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\HLSL\Source">
+      <UniqueIdentifier>{223f95ad-8e18-4692-8832-d97d8fd4ad2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\HLSL\Header">
+      <UniqueIdentifier>{8341c6b8-e754-447c-9d5f-4704be2434ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\Common">
+      <UniqueIdentifier>{c7a90b29-1462-4afa-ab68-391271df93e4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -51,38 +63,47 @@
     <ClInclude Include="External\imgui\backends\imgui_impl_win32.h">
       <Filter>External\imgui\backends</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\BaseApp.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Alloc.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Podo.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\BaseApp.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Debug.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Camera.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Timer.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Debug.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Option.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Light.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Alloc.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Material.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\State.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Mesh.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Asset.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Object.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Object.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Option.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Root.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Podo.h">
+      <Filter>Code\C++\Header</Filter>
     </ClInclude>
-    <ClInclude Include="Code\Header\Camera.h">
-      <Filter>Code\Header</Filter>
+    <ClInclude Include="Code\C++\Header\Root.h">
+      <Filter>Code\C++\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\C++\Header\State.h">
+      <Filter>Code\C++\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\C++\Header\Timer.h">
+      <Filter>Code\C++\Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Code\Common\Common.h">
+      <Filter>Code\Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -107,34 +128,34 @@
     <ClCompile Include="External\imgui\backends\imgui_impl_win32.cpp">
       <Filter>External\imgui\backends</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\main.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\main.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\PodoUpdate.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\PodoClose.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\PodoReset.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\PodoInput.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\PodoClose.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\PodoReset.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\PodoUtility.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\PodoUpdate.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
-    <ClCompile Include="Code\Source\PodoInput.cpp">
-      <Filter>Code\Source</Filter>
+    <ClCompile Include="Code\C++\Source\PodoUtility.cpp">
+      <Filter>Code\C++\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\PixelShader.hlsl">
-      <Filter>Shader</Filter>
+    <FxCompile Include="Code\HLSL\Source\PixelShader.hlsl">
+      <Filter>Code\HLSL\Source</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\VertexShader.hlsl">
-      <Filter>Shader</Filter>
+    <FxCompile Include="Code\HLSL\Source\VertexShader.hlsl">
+      <Filter>Code\HLSL\Source</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

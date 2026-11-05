@@ -3,8 +3,11 @@
 //Podo
 #include "Podo.h"
 #include "Option.h"
+#include "Camera.h"
+#include "Light.h"
 #include "Object.h"
-#include "Asset.h"
+#include "Material.h"
+#include "Mesh.h"
 #include "Root.h"
 #include "Alloc.h"
 #include "Debug.h"
@@ -121,9 +124,11 @@ void Podo::Reset()
 	{
 		m_needResetWorkload = false;
 
-		ResetAssets();
+		ResetMeshes();
+		ResetMaterials();
 		ResetObjects();
-		ResetCamera();
+		ResetLights();
+		ResetCameras();
 
 		ResetCBVSRVUAV();
 	}
@@ -132,7 +137,7 @@ void Podo::Reset()
 	{
 		m_needResetRenderConfigure = false;
 
-		//TODO: PSO 초기화와 GUI 초기화 요청을 분할하기
+		//TODO: Scene 렌더 설정 초기화와 GUI 렌더 설정 초기화 요청을 분할하기
 		ResetRootSignature();
 		ResetPipelineStateObject();
 		ResetImGui();
@@ -502,12 +507,11 @@ void Podo::ResetDescriptorHeapCBVSRVUAV()
 	m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart());
 	m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
 
-	m_descriptorHeapCBVSRVUAVStartHandleCPUForRender = m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI;
-	m_descriptorHeapCBVSRVUAVStartHandleCPUForRender.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
-	m_descriptorHeapCBVSRVUAVStartHandleGPUForRender = m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI;
-	m_descriptorHeapCBVSRVUAVStartHandleGPUForRender.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
+	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene = m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI;
+	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
+	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene = m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI;
+	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
 }
-
 
 void Podo::ResetHDRSwapChainSupport()
 {
@@ -724,47 +728,47 @@ void Podo::ResetDSV()
 	m_device->CreateDepthStencilView(m_screenDepthStencilBuffer.Get(), nullptr, m_descriptorHeapDSVStartHandleCPU);
 }
 
-void Podo::ResetAssets()
+void Podo::ResetMeshes()
 {
-	m_workloadAssets.clear();
+	m_workloadMeshes.clear();
 
 	std::vector<Vertex> boxVertices =
 	{
-		// -Z(Red)
-		{{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{-0.5f, +0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{+0.5f, +0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{+0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.5f, 0.0f, 0.0f}},
+		// -Z
+		{{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
+		{{-0.5f, +0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
+		{{+0.5f, +0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
+		{{+0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
 
-		// +Z(Red)
-		{{-0.5f, -0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{-0.5f, +0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{+0.5f, +0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}, {0.5f, 0.0f, 0.0f}},
-		{{+0.5f, -0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}, {0.5f, 0.0f, 0.0f}},
+		// +Z
+		{{-0.5f, -0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}},
+		{{-0.5f, +0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}},
+		{{+0.5f, +0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}},
+		{{+0.5f, -0.5f, +0.5f}, { 0.0f,  0.0f, +1.0f}},
 
-		// -X(Green)
-		{{-0.5f, -0.5f, +0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{-0.5f, +0.5f, +0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{-0.5f, +0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
+		// -X
+		{{-0.5f, -0.5f, +0.5f}, {-1.0f,  0.0f,  0.0f}},
+		{{-0.5f, +0.5f, +0.5f}, {-1.0f,  0.0f,  0.0f}},
+		{{-0.5f, +0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}},
+		{{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}},
 
-		// +X(Green)
-		{{+0.5f, -0.5f, -0.5f}, {+1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{+0.5f, +0.5f, -0.5f}, {+1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{+0.5f, +0.5f, +0.5f}, {+1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
-		{{+0.5f, -0.5f, +0.5f}, {+1.0f,  0.0f,  0.0f}, {0.0f, 0.5f, 0.0f}},
+		// +X
+		{{+0.5f, -0.5f, -0.5f}, {+1.0f,  0.0f,  0.0f}},
+		{{+0.5f, +0.5f, -0.5f}, {+1.0f,  0.0f,  0.0f}},
+		{{+0.5f, +0.5f, +0.5f}, {+1.0f,  0.0f,  0.0f}},
+		{{+0.5f, -0.5f, +0.5f}, {+1.0f,  0.0f,  0.0f}},
 
-		// +Y(Blue)
-		{{-0.5f, +0.5f, -0.5f}, { 0.0f, +1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{-0.5f, +0.5f, +0.5f}, { 0.0f, +1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{+0.5f, +0.5f, +0.5f}, { 0.0f, +1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{+0.5f, +0.5f, -0.5f}, { 0.0f, +1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
+		// +Y
+		{{-0.5f, +0.5f, -0.5f}, { 0.0f, +1.0f,  0.0f}},
+		{{-0.5f, +0.5f, +0.5f}, { 0.0f, +1.0f,  0.0f}},
+		{{+0.5f, +0.5f, +0.5f}, { 0.0f, +1.0f,  0.0f}},
+		{{+0.5f, +0.5f, -0.5f}, { 0.0f, +1.0f,  0.0f}},
 
-		// -Y(Blue)
-		{{-0.5f, -0.5f, +0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{+0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}},
-		{{+0.5f, -0.5f, +0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f, 0.5f}}
+		// -Y
+		{{-0.5f, -0.5f, +0.5f}, { 0.0f, -1.0f,  0.0f}},
+		{{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}},
+		{{+0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}},
+		{{+0.5f, -0.5f, +0.5f}, { 0.0f, -1.0f,  0.0f}}
 	};
 
 	std::vector<uint32_t> boxIndices =
@@ -780,17 +784,52 @@ void Podo::ResetAssets()
 	DirectX::ResourceUploadBatch resourceUpload(m_device.Get());
 	resourceUpload.Begin();
 	{
-		Asset boxAsset;
-		boxAsset.Create(m_device.Get(), resourceUpload, std::move(boxVertices), std::move(boxIndices));
+		Mesh boxMesh;
+		boxMesh.Create(m_device.Get(), resourceUpload, std::move(boxVertices), std::move(boxIndices));
 
-		//NOTE: ComPtr<ID3D12Resource> 초기화는 곧바로 일어나므로, 바로 이렇게 move해도 됨
-		m_workloadAssets["Box"] = std::move(boxAsset);
+		//NOTE: ComPtr<ID3D12Resource>의 초기화는 곧바로 일어나므로, 실제 업로드 및 복사는 일어나지 않았지만 바로 이렇게 move해도 됨
+		m_workloadMeshes["Box"] = std::move(boxMesh);
 	}
 	auto uploadFinished = resourceUpload.End(m_commandQueue.Get());
 
 	//NOTE: 커맨드 큐에 제출된 자원 복사 작업은 이후 제출될 렌더 명령들과 순서가 지켜지기에 굳이 대기가 필요하지 않지만,
-	//		End(..)가 반환하는 std::future에 의해 어쩔 수 없이 대기가 발생함을 코드로 표기해놓기로 함
+	//		End(..)가 반환하는 std::future의 소멸에 의해 대기가 발생함을 코드로 명시해놓기로 함
 	uploadFinished.wait();
+}
+
+void Podo::ResetMaterials()
+{
+	m_workloadMaterials.clear();
+
+	{
+		Material steelMaterial;
+		steelMaterial.Create(m_device.Get());
+
+		DirectX::XMFLOAT3	diffuseAlbedo	= { 0.1f, 0.1f, 0.1f };
+		DirectX::XMFLOAT3	fresnelR0		= { 0.6f, 0.6f, 0.6f };
+		float				shininess		= 0.8f;
+		steelMaterial.SetDiffuseAlbedo(diffuseAlbedo);
+		steelMaterial.SetFresnelR0(fresnelR0);
+		steelMaterial.SetShininess(shininess);
+		steelMaterial.UpdateMaterialConstantBuffer();
+
+		m_workloadMaterials["Steel"] = std::move(steelMaterial);
+	}
+
+	{
+		Material woodMaterial;
+		woodMaterial.Create(m_device.Get());
+
+		DirectX::XMFLOAT3	diffuseAlbedo	= { 0.5f, 0.3f, 0.1f };
+		DirectX::XMFLOAT3	fresnelR0		= { 0.1f, 0.1f, 0.1f };
+		float				shininess		= 0.2f;
+		woodMaterial.SetDiffuseAlbedo(diffuseAlbedo);
+		woodMaterial.SetFresnelR0(fresnelR0);
+		woodMaterial.SetShininess(shininess);
+		woodMaterial.UpdateMaterialConstantBuffer();
+
+		m_workloadMaterials["Wood"] = std::move(woodMaterial);
+	}
 }
 
 void Podo::ResetObjects()
@@ -799,9 +838,9 @@ void Podo::ResetObjects()
 
 	{
 		Object boxObject;
-		boxObject.Create(m_device.Get(), &m_workloadAssets.at("Box"));
+		boxObject.Create(m_device.Get(), &m_workloadMeshes.at("Box"), &m_workloadMaterials.at("Steel"));
 
-		DirectX::XMVECTOR scale			= DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
 		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
 		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		DirectX::XMVECTOR position		= DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
@@ -815,9 +854,9 @@ void Podo::ResetObjects()
 
 	{
 		Object boxObject;
-		boxObject.Create(m_device.Get(), &m_workloadAssets.at("Box"));
+		boxObject.Create(m_device.Get(), &m_workloadMeshes.at("Box"), &m_workloadMaterials.at("Wood"));
 
-		DirectX::XMVECTOR scale			= DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
 		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
 		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		DirectX::XMVECTOR position		= DirectX::XMVectorSet(2.0f, 0.0f, 5.0f, 1.0f);
@@ -830,15 +869,64 @@ void Podo::ResetObjects()
 	}
 }
 
-void Podo::ResetCamera()
+void Podo::ResetLights()
 {
-	m_workloadCamera.Create(m_device.Get());
+	m_workloadLights.clear();
+
+	{
+		Light mainLight;
+		mainLight.Create(m_device.Get());
+
+		DirectionalLight sun		= {};
+		sun.strength				= { 1.0f,  0.7f, 0.7f };
+		sun.direction				= { 1.0f, -0.3f, 0.0f };
+		DirectX::XMFLOAT3 ambient	= { 0.1f,  0.1f, 0.2f };
+		mainLight.SetDirectionalLight("Sun", sun);
+		mainLight.SetAmbientLight(ambient);
+		mainLight.UpdateLightConstantBuffer();
+
+		m_workloadLights["MainLight"] = std::move(mainLight);
+	}
+}
+
+void Podo::ResetCameras()
+{
+	m_workloadCameras.clear();
+
+	{
+		Camera mainCamera;
+		mainCamera.Create(m_device.Get());
+
+		DirectX::XMVECTOR position		= DirectX::XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
+		DirectX::XMVECTOR target		= DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 1.0f);
+		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 1.0f);
+		mainCamera.SetPosition(position);
+		mainCamera.SetTarget(target);
+		mainCamera.SetUpDirection(upDirection);
+		mainCamera.UpdateCameraConstantBuffer(m_screenBackBufferAspectRatio);
+
+		m_workloadCameras["MainCamera"] = std::move(mainCamera);
+	}
 }
 
 void Podo::ResetCBVSRVUAV()
 {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_descriptorHeapCBVSRVUAVStartHandleCPUForRender;
-	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_descriptorHeapCBVSRVUAVStartHandleGPUForRender;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_descriptorHeapCBVSRVUAVStartHandleCPUForScene;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_descriptorHeapCBVSRVUAVStartHandleGPUForScene;
+
+	for (auto& [name, material] : m_workloadMaterials)
+	{
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = material.GetMaterialConstantBufferGPUAddress();
+		cbvDesc.SizeInBytes = material.GetMaterialConstantBufferWidth();
+
+		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
+
+		material.SetMaterialConstantBufferViewGPUHandle(gpuHandle);
+
+		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+	}
 
 	for (auto& [name, object] : m_workloadObjects)
 	{
@@ -859,14 +947,26 @@ void Podo::ResetRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER rootParameter[ROOT_PARAMETER_COUNT] = {};
 
-	CD3DX12_DESCRIPTOR_RANGE objectConstantTable[1] = {};
-	UINT objectDescriptorsNum		= 1;
-	UINT objectBaseShaderRegister	= 0;
-	objectConstantTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, objectDescriptorsNum, objectBaseShaderRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	rootParameter[OBJECT_CONSTANT].InitAsDescriptorTable(1, objectConstantTable);
+	//NOTE: 추후 뷰 어레이로 확장할 것을 고려해서 머테리얼과 오브젝트 루트 매개변수는 테이블 형식으로 작성해놓음
+	UINT materialShaderRegister = 0;
+	UINT materialDescriptorsNum = 1;
+	CD3DX12_DESCRIPTOR_RANGE materialConstantTable[1] = {};
+	materialConstantTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, materialDescriptorsNum, materialShaderRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	rootParameter[MATERIAL_CONSTANT].InitAsDescriptorTable(1, materialConstantTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	UINT cameraShaderRegister = objectBaseShaderRegister + objectDescriptorsNum;
-	rootParameter[CAMERA_CONSTANT].InitAsConstantBufferView(cameraShaderRegister, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+	UINT objectShaderRegister = materialShaderRegister + materialDescriptorsNum;
+	UINT objectDescriptorsNum = 1;
+	CD3DX12_DESCRIPTOR_RANGE objectConstantTable[1] = {};
+	objectConstantTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, objectDescriptorsNum, objectShaderRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	rootParameter[OBJECT_CONSTANT].InitAsDescriptorTable(1, objectConstantTable, D3D12_SHADER_VISIBILITY_VERTEX);
+	
+	UINT lightShaderRegister	= objectShaderRegister + objectDescriptorsNum;
+	UINT lightDescriptorsNum	= 1;
+	rootParameter[LIGHT_CONSTANT].InitAsConstantBufferView(lightShaderRegister, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	UINT cameraShaderRegister	= lightShaderRegister + lightDescriptorsNum;
+	UINT cameraDescriptorsNum	= 1;
+	rootParameter[CAMERA_CONSTANT].InitAsConstantBufferView(cameraShaderRegister, 0, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc
 	(
@@ -910,10 +1010,8 @@ void Podo::ResetPipelineStateObject()
 {
 	D3D12_INPUT_ELEMENT_DESC inputElementDesc[] =
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-		
+		{"POSITION",	0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 	};
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = { inputElementDesc, _countof(inputElementDesc) };
@@ -980,26 +1078,26 @@ void Podo::ResetImGui()
 	style.ScaleAllSizes(imGuiScale);
 	style.FontScaleDpi = imGuiScale;
 
-	ImVec4* colors = style.Colors;
-	colors[ImGuiCol_Text]				= ImVec4(0.570482f, 0.507079f, 0.354692f, 1.0f);
-	colors[ImGuiCol_TextDisabled]		= ImVec4(0.119280f, 0.119280f, 0.094630f, 1.0f);
-	colors[ImGuiCol_FrameBg]			= ImVec4(0.010816f, 0.011645f, 0.010023f, 1.0f);
-	colors[ImGuiCol_FrameBgHovered]		= ImVec4(0.028622f, 0.025843f, 0.015325f, 1.0f);
-	colors[ImGuiCol_FrameBgActive]		= ImVec4(0.054972f, 0.043234f, 0.017389f, 1.0f);
-	colors[ImGuiCol_CheckMark]			= ImVec4(0.638283f, 0.420033f, 0.083535f, 1.0f);
-	colors[ImGuiCol_SliderGrab]			= ImVec4(0.295700f, 0.214041f, 0.073239f, 1.0f);
-	colors[ImGuiCol_SliderGrabActive]	= ImVec4(0.638283f, 0.393123f, 0.063724f, 1.0f);
-	colors[ImGuiCol_WindowBg]			= ImVec4(0.006571f, 0.006941f, 0.006571f, 1.0f);
-	colors[ImGuiCol_TitleBg]			= ImVec4(0.012510f, 0.012510f, 0.010816f, 1.0f);
-	colors[ImGuiCol_TitleBgActive]		= ImVec4(0.027212f, 0.024515f, 0.018478f, 1.0f);
-	colors[ImGuiCol_TitleBgCollapsed]	= ImVec4(0.004896f, 0.005103f, 0.004896f, 1.0f);
-	colors[ImGuiCol_Button]				= ImVec4(0.036306f, 0.037972f, 0.033105f, 1.0f);
-	colors[ImGuiCol_ButtonHovered]		= ImVec4(0.094630f, 0.083535f, 0.050876f, 1.0f);
-	colors[ImGuiCol_ButtonActive]		= ImVec4(0.187317f, 0.119280f, 0.027212f, 1.0f);
-	colors[ImGuiCol_Border]				= ImVec4(0.073239f, 0.063724f, 0.043234f, 0.55f);
-	colors[ImGuiCol_Separator]			= ImVec4(0.094630f, 0.078288f, 0.050876f, 0.65f);
-	colors[ImGuiCol_SeparatorHovered]	= ImVec4(0.170645f, 0.119280f, 0.094630f, 0.78f);
-	colors[ImGuiCol_SeparatorActive]	= ImVec4(0.263273f, 0.170645f, 0.154872f, 0.90f);
+	ImVec4* pColors = style.Colors;
+	pColors[ImGuiCol_Text]				= ImVec4(0.570482f, 0.507079f, 0.354692f, 1.0f);
+	pColors[ImGuiCol_TextDisabled]		= ImVec4(0.119280f, 0.119280f, 0.094630f, 1.0f);
+	pColors[ImGuiCol_FrameBg]			= ImVec4(0.010816f, 0.011645f, 0.010023f, 1.0f);
+	pColors[ImGuiCol_FrameBgHovered]	= ImVec4(0.028622f, 0.025843f, 0.015325f, 1.0f);
+	pColors[ImGuiCol_FrameBgActive]		= ImVec4(0.054972f, 0.043234f, 0.017389f, 1.0f);
+	pColors[ImGuiCol_CheckMark]			= ImVec4(0.638283f, 0.420033f, 0.083535f, 1.0f);
+	pColors[ImGuiCol_SliderGrab]		= ImVec4(0.295700f, 0.214041f, 0.073239f, 1.0f);
+	pColors[ImGuiCol_SliderGrabActive]	= ImVec4(0.638283f, 0.393123f, 0.063724f, 1.0f);
+	pColors[ImGuiCol_WindowBg]			= ImVec4(0.006571f, 0.006941f, 0.006571f, 1.0f);
+	pColors[ImGuiCol_TitleBg]			= ImVec4(0.012510f, 0.012510f, 0.010816f, 1.0f);
+	pColors[ImGuiCol_TitleBgActive]		= ImVec4(0.027212f, 0.024515f, 0.018478f, 1.0f);
+	pColors[ImGuiCol_TitleBgCollapsed]	= ImVec4(0.004896f, 0.005103f, 0.004896f, 1.0f);
+	pColors[ImGuiCol_Button]			= ImVec4(0.036306f, 0.037972f, 0.033105f, 1.0f);
+	pColors[ImGuiCol_ButtonHovered]		= ImVec4(0.094630f, 0.083535f, 0.050876f, 1.0f);
+	pColors[ImGuiCol_ButtonActive]		= ImVec4(0.187317f, 0.119280f, 0.027212f, 1.0f);
+	pColors[ImGuiCol_Border]			= ImVec4(0.073239f, 0.063724f, 0.043234f, 0.55f);
+	pColors[ImGuiCol_Separator]			= ImVec4(0.094630f, 0.078288f, 0.050876f, 0.65f);
+	pColors[ImGuiCol_SeparatorHovered]	= ImVec4(0.170645f, 0.119280f, 0.094630f, 0.78f);
+	pColors[ImGuiCol_SeparatorActive]	= ImVec4(0.263273f, 0.170645f, 0.154872f, 0.90f);
 
 	m_renderConfigureImGuiInitialized = true;
 }

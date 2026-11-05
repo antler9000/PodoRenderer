@@ -13,7 +13,7 @@
 
 struct OptionFullScreen
 {
-	bool userEnabled = false;
+	bool userEnabled = {};
 
 	bool IsActive() const
 	{
@@ -122,7 +122,7 @@ struct OptionWindowSave
 
 struct OptionVSync
 {
-	bool userEnabled = false;
+	bool userEnabled = {};
 
 	bool IsActive() const
 	{
@@ -158,7 +158,7 @@ struct OptionVSync
 
 struct OptionTearing
 {
-	bool featureSupported = false;
+	bool featureSupported = {};
 
 	bool IsActive() const
 	{
@@ -187,10 +187,10 @@ struct OptionTearing
 
 struct OptionHDR
 {
-	bool outputSupported		= false;
-	bool formatSupported		= false;
-	bool colorSpaceSupported	= false;
-	bool userEnabled			= false;
+	bool outputSupported		= {};
+	bool formatSupported		= {};
+	bool colorSpaceSupported	= {};
+	bool userEnabled			= {};
 
 	bool IsActive() const
 	{

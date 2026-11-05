@@ -1,7 +1,8 @@
 ﻿#pragma once
 
 //Podo
-#include "Asset.h"
+#include "Material.h"
+#include "Mesh.h"
 #include "Debug.h"
 
 //Win32
@@ -18,8 +19,8 @@
 
 struct ObjectConstantBuffer
 {
-	DirectX::XMFLOAT4X4 worldMatrix;
-	DirectX::XMFLOAT4X4 worldInvTransMatrix;
+	DirectX::XMFLOAT4X4 worldMatrix			= {};
+	DirectX::XMFLOAT4X4 worldInvTransMatrix = {};
 };
 
 class Object
@@ -35,17 +36,19 @@ public:
 	Object(const Object& sourceObject) = delete;
 	Object& operator=(const Object& sourceObject) = delete;
 
-	void Create(ID3D12Device* device, const Asset* asset)
+	//NOTE: 메쉬는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
+	void Create(ID3D12Device* pDevice, const Mesh* pMesh, Material* pMaterial)
 	{
-		m_asset = asset;
+		m_pMesh		= pMesh;
+		m_pMaterial	= pMaterial;
 
-		constexpr UINT			constantBufferSize = (sizeof(ObjectConstantBuffer) + 255) & ~255;
-		D3D12_HEAP_PROPERTIES	heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		D3D12_RESOURCE_DESC		resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		constexpr UINT			constantBufferSize	= (sizeof(ObjectConstantBuffer) + 255) & ~255;
+		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
 		ThrowIfFailed
 		(
-			device->CreateCommittedResource
+			pDevice->CreateCommittedResource
 			(
 				&heapProperties,
 				D3D12_HEAP_FLAG_NONE,
@@ -59,6 +62,7 @@ public:
 		UpdateObjectConstantBuffer();
 	}
 
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
 	void SetPosition(DirectX::XMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
@@ -79,14 +83,15 @@ public:
 			DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)
 		);
 
-		DirectX::XMVECTOR direction = DirectX::XMQuaternionRotationMatrix(rotationMatrix);
+		DirectX::XMVECTOR rotationQuaternion = DirectX::XMQuaternionRotationMatrix(rotationMatrix);
 
-		DirectX::XMStoreFloat4(&m_rotation, direction);
+		DirectX::XMStoreFloat4(&m_rotation, rotationQuaternion);
 	}
 
-	void SetScale(DirectX::XMVECTOR scale)
+	//NOTE: XMFLOAT4 이하의 구조체들은 크기가 작으므로, 상수 참조 대신 간단한 값복사 방식을 사용하기로 함
+	void SetScale(DirectX::XMFLOAT3 scale)
 	{
-		DirectX::XMStoreFloat3(&m_scale, scale);
+		m_scale = scale;
 	}
 
 	void UpdateObjectConstantBuffer()
@@ -102,21 +107,26 @@ public:
 
 		DirectX::XMMATRIX worldInvMatrix = XMMatrixInverse(nullptr, worldMatrix);
 
-		ObjectConstantBuffer objectConstantBufferData;
+		ObjectConstantBuffer objectConstantBufferData = {};
 		XMStoreFloat4x4(&objectConstantBufferData.worldMatrix, XMMatrixTranspose(worldMatrix));
 		XMStoreFloat4x4(&objectConstantBufferData.worldInvTransMatrix, worldInvMatrix);
 
-		void* mappedData = nullptr;
+		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_objectConstantBuffer->Map(0, &readRange, &mappedData));
-		std::memcpy(mappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));
+		ThrowIfFailed(m_objectConstantBuffer->Map(0, &readRange, &pMappedData));
+		std::memcpy(pMappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));
 		m_objectConstantBuffer->Unmap(0, nullptr);
 	}
 
-	const Asset* GetAsset() const
+	const Mesh* GetMesh() const
 	{
-		return m_asset;
+		return m_pMesh;
+	}
+
+	Material* GetMaterial() const
+	{
+		return m_pMaterial;
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetObjectConstantBufferGPUAddress() const
@@ -141,13 +151,14 @@ public:
 
 private:
 
-	const Asset* m_asset = nullptr;
+	const Mesh* m_pMesh		= {};
+	Material* m_pMaterial	= {};
 
 	DirectX::XMFLOAT3 m_scale		= { 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT4 m_rotation	= { 0.0f, 0.0f, 0.0f, 1.0f };
 	DirectX::XMFLOAT3 m_position	= { 0.0f, 0.0f, 0.0f };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_objectConstantBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_objectConstantBuffer = {};
 
 	D3D12_GPU_DESCRIPTOR_HANDLE m_objectConstantBufferViewGPUHandle = {};
 };

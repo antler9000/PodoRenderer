@@ -5,8 +5,11 @@
 #include "Podo.h"
 #include "State.h"
 #include "Timer.h"
+#include "Camera.h"
+#include "Light.h"
 #include "Object.h"
-#include "Asset.h"
+#include "Material.h"
+#include "Mesh.h"
 #include "Root.h"
 #include "Debug.h"
 
@@ -113,7 +116,7 @@ void Podo::UpdateWorld()
 	{
 		Object& horizontalBoxObject = m_workloadObjects.at("HorizontalBoxObject");
 
-		DirectX::XMVECTOR scale			= DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
 		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
 		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		DirectX::XMVECTOR position		= XMVectorSet(oscillation, 0.0f, 3.0f, 1.0f);
@@ -126,7 +129,7 @@ void Podo::UpdateWorld()
 	{
 		Object& verticalBoxObject = m_workloadObjects.at("VerticalBoxObject");
 
-		DirectX::XMVECTOR scale			= DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
 		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		DirectX::XMVECTOR position		= XMVectorSet(2.0f, oscillation, 5.0f, 1.0f);
@@ -137,6 +140,24 @@ void Podo::UpdateWorld()
 	}
 
 	{
+		Light& mainLight = m_workloadLights.at("MainLight");
+
+		constexpr float speed = 0.2f;
+
+		float directionAngleXZ = timeSecond * speed;
+
+		DirectionalLight sun		= {};
+		sun.strength				= { 1.0f, 0.7f, 0.7f };
+		sun.direction				= { XMScalarCos(directionAngleXZ), -0.3f, XMScalarSin(directionAngleXZ)};
+		DirectX::XMFLOAT3 ambient	= { 0.1f, 0.1f, 0.2f };
+		mainLight.SetDirectionalLight("Sun", sun);
+		mainLight.SetAmbientLight(ambient);
+		mainLight.UpdateLightConstantBuffer();
+	}
+
+	{
+		Camera& mainCamera = m_workloadCameras.at("MainCamera");
+
 		constexpr float radius	= 10.0f;
 		constexpr float height	= 5.0f;
 		constexpr float speed	= 0.3f;
@@ -153,10 +174,10 @@ void Podo::UpdateWorld()
 		XMVECTOR cameraTarget	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		XMVECTOR cameraUp		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-		m_workloadCamera.SetPosition(cameraPosition);
-		m_workloadCamera.SetTarget(cameraTarget);
-		m_workloadCamera.SetUpDirection(cameraUp);
-		m_workloadCamera.UpdateCameraConstantBuffer(m_screenBackBufferAspectRatio);
+		mainCamera.SetPosition(cameraPosition);
+		mainCamera.SetTarget(cameraTarget);
+		mainCamera.SetUpDirection(cameraUp);
+		mainCamera.UpdateCameraConstantBuffer(m_screenBackBufferAspectRatio);
 	}
 }
 
@@ -178,11 +199,11 @@ void Podo::UpdateRender()
 		PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(1), L"GPU: 1. Frame Time");
 
 		{
-			PIXScopedEvent(PIX_COLOR_INDEX(6), L"CPU: 06. Bind Resources");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(2), L"GPU: 2. Bind Resources");
+			PIXScopedEvent(PIX_COLOR_INDEX(6), L"CPU: 06. Prepare Draw");
+			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(2), L"GPU: 2. Prepare Draw");
 
-			ID3D12DescriptorHeap* descriptorHeaps[] = { m_descriptorHeapCBVSRVUAV.Get() };
-			m_commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+			ID3D12DescriptorHeap* ppDescriptorHeap[] = { m_descriptorHeapCBVSRVUAV.Get() };
+			m_commandList->SetDescriptorHeaps(_countof(ppDescriptorHeap), ppDescriptorHeap);
 
 			CD3DX12_RESOURCE_BARRIER barrierPresentToRenderTarget = CD3DX12_RESOURCE_BARRIER::Transition
 			(
@@ -222,23 +243,36 @@ void Podo::UpdateRender()
 
 			m_commandList->SetGraphicsRootConstantBufferView
 			(
+				LIGHT_CONSTANT,
+				m_workloadLights["MainLight"].GetLightConstantBufferGPUAddress()
+			);
+
+			m_commandList->SetGraphicsRootConstantBufferView
+			(
 				CAMERA_CONSTANT,
-				m_workloadCamera.GetCameraConstantBufferGPUAddress()
+				m_workloadCameras["MainCamera"].GetCameraConstantBufferGPUAddress()
 			);
 
 			for (const auto& [name, object] : m_workloadObjects)
 			{
-				const Asset* asset = object.GetAsset();
+				const Mesh* pMesh = object.GetMesh();
+				m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
+				m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 
-				m_commandList->IASetVertexBuffers(0, 1, asset->GetVertexBufferView());
-				m_commandList->IASetIndexBuffer(asset->GetIndexBufferView());
+				const Material* pMaterial = object.GetMaterial();
+				m_commandList->SetGraphicsRootDescriptorTable
+				(
+					MATERIAL_CONSTANT,
+					pMaterial->GetMaterialConstantBufferViewGPUHandle()
+				);
+
 				m_commandList->SetGraphicsRootDescriptorTable
 				(
 					OBJECT_CONSTANT,
 					object.GetObjectConstantBufferViewGPUHandle()
 				);
 
-				m_commandList->DrawIndexedInstanced(asset->GetIndexCount(), 1, 0, 0, 0);
+				m_commandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
 			}
 		}
 
@@ -250,8 +284,8 @@ void Podo::UpdateRender()
 		}
 
 		{
-			PIXScopedEvent(PIX_COLOR_INDEX(9), L"CPU: 09. Unbind Resources");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(5), L"GPU: 5. Unbind Resources");
+			PIXScopedEvent(PIX_COLOR_INDEX(9), L"CPU: 09. Prepare Present");
+			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(5), L"GPU: 5. Prepare Present");
 
 			CD3DX12_RESOURCE_BARRIER barrierRenderTargetToPresent = CD3DX12_RESOURCE_BARRIER::Transition
 			(
@@ -267,8 +301,8 @@ void Podo::UpdateRender()
 		PIXScopedEvent(PIX_COLOR_INDEX(10), L"CPU: 10. Submit Command List");
 
 		ThrowIfFailed(m_commandList->Close());
-		ID3D12CommandList* commandLists[] = { m_commandList.Get() };
-		m_commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+		ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
 	}
 
 	{
@@ -381,9 +415,9 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 
 	{
 		ImGui::Text("GUI");
-		const char* masterSizeStringArray[] = { "50%", "75%", "100%", "125%", "150%" };
+		const char* masterSizeCStringArray[] = { "50%", "75%", "100%", "125%", "150%" };
 		int selectedIndex = (m_optionGUI.masterSize - 50) / 25;
-		if (ImGui::Combo("Master Size", &selectedIndex, masterSizeStringArray, _countof(masterSizeStringArray)) == true)
+		if (ImGui::Combo("Master Size", &selectedIndex, masterSizeCStringArray, _countof(masterSizeCStringArray)) == true)
 		{
 			m_optionGUI.SetMasterSize(50 + 25 * selectedIndex);
 		}
@@ -403,7 +437,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	}
 	if (previousGUIState != nowGUIState)
 	{
-		//TODO: PSO 초기화와 GUI 초기화 요청 분할 후 반영하기
+		//TODO: Scene 렌더 설정 초기화와 GUI 렌더 설정 초기화 요청을 분할 후 반영하기
 		m_needResetRenderConfigure = true;
 	}
 

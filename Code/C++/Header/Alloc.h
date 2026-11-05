@@ -13,8 +13,8 @@
 //NOTE: Dear ImGui의 Win32 + D3D12 예제에 사용된 할당자를 수정하여 사용함
 struct ImGuiDescriptorHeapAllocator
 {
-    ID3D12DescriptorHeap*       pHeap = nullptr;
-    D3D12_DESCRIPTOR_HEAP_TYPE  HeapType = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+    ID3D12DescriptorHeap*       pHeap       = nullptr;
+    D3D12_DESCRIPTOR_HEAP_TYPE  HeapType    = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
     D3D12_CPU_DESCRIPTOR_HANDLE HeapStartCpu;
     D3D12_GPU_DESCRIPTOR_HANDLE HeapStartGpu;
     UINT                        HeapHandleIncrement;

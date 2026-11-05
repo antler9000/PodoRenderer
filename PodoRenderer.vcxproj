@@ -28,17 +28,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Code\Header\Asset.h" />
-    <ClInclude Include="Code\Header\BaseApp.h" />
-    <ClInclude Include="Code\Header\Camera.h" />
-    <ClInclude Include="Code\Header\Object.h" />
-    <ClInclude Include="Code\Header\Root.h" />
-    <ClInclude Include="Code\Header\State.h" />
-    <ClInclude Include="Code\Header\Option.h" />
-    <ClInclude Include="Code\Header\Podo.h" />
-    <ClInclude Include="Code\Header\Debug.h" />
-    <ClInclude Include="Code\Header\Timer.h" />
-    <ClInclude Include="Code\Header\Alloc.h" />
+    <ClInclude Include="Code\C++\Header\Alloc.h" />
+    <ClInclude Include="Code\C++\Header\BaseApp.h" />
+    <ClInclude Include="Code\C++\Header\Camera.h" />
+    <ClInclude Include="Code\C++\Header\Debug.h" />
+    <ClInclude Include="Code\C++\Header\Light.h" />
+    <ClInclude Include="Code\C++\Header\Material.h" />
+    <ClInclude Include="Code\C++\Header\Mesh.h" />
+    <ClInclude Include="Code\C++\Header\Object.h" />
+    <ClInclude Include="Code\C++\Header\Option.h" />
+    <ClInclude Include="Code\C++\Header\Podo.h" />
+    <ClInclude Include="Code\C++\Header\Root.h" />
+    <ClInclude Include="Code\C++\Header\State.h" />
+    <ClInclude Include="Code\C++\Header\Timer.h" />
+    <ClInclude Include="Code\Common\Common.h" />
     <ClInclude Include="External\imgui\backends\imgui_impl_dx12.h" />
     <ClInclude Include="External\imgui\backends\imgui_impl_win32.h" />
     <ClInclude Include="External\imgui\imconfig.h" />
@@ -49,12 +52,12 @@
     <ClInclude Include="External\imgui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Code\Source\main.cpp" />
-    <ClCompile Include="Code\Source\PodoInput.cpp" />
-    <ClCompile Include="Code\Source\PodoClose.cpp" />
-    <ClCompile Include="Code\Source\PodoUpdate.cpp" />
-    <ClCompile Include="Code\Source\PodoReset.cpp" />
-    <ClCompile Include="Code\Source\PodoUtility.cpp" />
+    <ClCompile Include="Code\C++\Source\main.cpp" />
+    <ClCompile Include="Code\C++\Source\PodoClose.cpp" />
+    <ClCompile Include="Code\C++\Source\PodoInput.cpp" />
+    <ClCompile Include="Code\C++\Source\PodoReset.cpp" />
+    <ClCompile Include="Code\C++\Source\PodoUpdate.cpp" />
+    <ClCompile Include="Code\C++\Source\PodoUtility.cpp" />
     <ClCompile Include="External\imgui\backends\imgui_impl_dx12.cpp" />
     <ClCompile Include="External\imgui\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="External\imgui\imgui.cpp" />
@@ -67,29 +70,21 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\PixelShader.hlsl">
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">6.6</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Pixel</ShaderType>
+    <FxCompile Include="Code\HLSL\Source\PixelShader.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PS</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">PS</EntryPointName>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Qembed_debug %(AdditionalOptions)</AdditionalOptions>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shader\VertexShader.hlsl">
+    <FxCompile Include="Code\HLSL\Source\VertexShader.hlsl">
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.6</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.6</ShaderModel>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">VS</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">6.6</ShaderModel>
-      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">-Qembed_debug %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -238,7 +233,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Code\Header;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Code\C++\Header;$(SolutionDir)\Code\Common;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
@@ -251,6 +246,11 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
       <AdditionalManifestFiles>$(ProjectDir)DPIAwareness.menifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <FxCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -261,7 +261,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Code\Header;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Code\C++\Header;$(SolutionDir)\Code\Common;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
@@ -274,6 +274,11 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
       <AdditionalManifestFiles>$(ProjectDir)DPIAwareness.menifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <FxCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
     <ClCompile>
@@ -284,7 +289,7 @@
       <PreprocessorDefinitions>USE_PIX;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Code\Header;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Code\C++\Header;$(SolutionDir)\Code\Common;$(SolutionDir)\External\imgui;$(SolutionDir)\External\imgui\Backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
@@ -297,6 +302,11 @@
       <EnableSegmentHeap>true</EnableSegmentHeap>
       <AdditionalManifestFiles>$(ProjectDir)DPIAwareness.menifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <FxCompile>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

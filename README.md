@@ -1,9 +1,9 @@
 # PodoRenderer
-Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다.
+Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 
-필믹(Filmic)한 비주얼을 윈도우 데스크톱 환경에 담아내는 것을 목표로 합니다.
+실시간 렌더링을 윈도우 데스크톱 환경에 담아내는 것을 목표로 합니다.
 
-현재 기초적인 조명 기능과 HDR 옵션 기능을 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 최적화하고 있습니다.
+현재 텍스처 기능과 HDR 옵션 기능을 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 최적화하고 있습니다.
 
 <br>
 
@@ -180,26 +180,26 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 [VSync Off]
 |구분 |측정 구간                                                                  |평균 소요 시간 |
 |-----|---------------------------------------------------------------------------|--------------:|
-|CPU  |1. 프레임 시간                                                             |362,328 ns     |
-|     |├─ 2. GPU 명령 완료 대기                                                   |90,857 ns      |
-|     |├─ 3. 논-렌더 로직                                                         |4,916 ns       |
-|     |└─ 4. 렌더 로직                                                            |266,322 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |9,971 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 자원 바인딩          |8,833 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |3,341 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |10,486 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 자원 언바인딩        |1,566 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |60,591 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |170,878 ns     |
-|GPU  |1. 프레임 시간                                                             |23,864 ns      |
-|     |├─ 2. 자원 바인딩                                                          |22,579 ns      |
-|     |├─ 3. 씬 그리기                                                            |1,139 ns       |
-|     |├─ 4. GUI 그리기                                                           |98 ns          |
-|     |└─ 5. 자원 언바인딩                                                        |10 ns          |
+|CPU  |1. 프레임 시간                                                             |373,051 ns     |
+|     |├─ 2. GPU 명령 완료 대기                                                   |78,657 ns      |
+|     |├─ 3. 논-렌더 로직                                                         |4,397 ns       |
+|     |└─ 4. 렌더 로직                                                            |289,784 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |8,587 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |8,912 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |3,679 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |10,638 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |1,616 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |62,102 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |193,579 ns     |
+|GPU  |1. 프레임 시간                                                             |32,722 ns      |
+|     |├─ 2. 그리기 준비                                                          |29,128 ns      |
+|     |├─ 3. 씬 그리기                                                            |3,428 ns       |
+|     |├─ 4. GUI 그리기                                                           |109 ns         |
+|     |└─ 5. 제시 준비                                                            |11 ns          |
 
-- 총 캡처 시간: 8,845.25 ms
+- 총 캡처 시간: 12,257.91 ms
 
-- GPU 명령이 모두 소진될 때까지 CPU를 대기시키는 현 로직으로 인해, '2. GPU 명령 완료 대기' 과정에서 CPU 프레임 시간의 약 25%가 대기 상태로 낭비되고 있습니다.
+- GPU 명령이 모두 소진될 때까지 CPU를 대기시키는 현 로직으로 인해, '2. GPU 명령 완료 대기' 과정에서 CPU 프레임 시간의 약 20%가 대기 상태로 낭비되고 있습니다.
 
 - '11. 제시' 과정은 현재 CPU 프레임 시간의 약 절반을 차지하고 있지만, 렌더링 워크로드가 무거워지면 고정적인 제시 과정의 비중은 감소할 것으로 예상합니다.
 
@@ -208,30 +208,30 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 [VSync On]  
 |구분 |측정 구간                                                                  |평균 소요 시간 |
 |-----|---------------------------------------------------------------------------|--------------:|
-|CPU  |1. 프레임 시간                                                             |4,148,915 ns   |
-|     |├─ 2. GPU 명령 완료 대기                                                   |3,565,798 ns   |
-|     |├─ 3. 논-렌더 로직                                                         |21,302 ns      |
-|     |└─ 4. 렌더 로직                                                            |560,952 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |23,855 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 자원 바인딩          |23,213 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |7,698 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |24,960 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 자원 언바인딩        |3,436 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |134,496 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |342,258 ns     |
-|GPU  |1. 프레임 시간                                                             |141,546 ns     |
-|     |├─ 2. 자원 바인딩                                                          |132,994 ns     |
-|     |├─ 3. 씬 그리기                                                            |7,903 ns       |
-|     |├─ 4. GUI 그리기                                                           |568 ns         |
-|     |└─ 5. 자원 언바인딩                                                        |17 ns          |
+|CPU  |1. 프레임 시간                                                             |4,148,826 ns   |
+|     |├─ 2. GPU 명령 완료 대기                                                   |3,576,045 ns   |
+|     |├─ 3. 논-렌더 로직                                                         |11,951 ns      |
+|     |└─ 4. 렌더 로직                                                            |560,301 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |22,490 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |22,186 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |8,554 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |24,859 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |3,781 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |135,995 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |341,139 ns     |
+|GPU  |1. 프레임 시간                                                             |191,355 ns     |
+|     |├─ 2. 그리기 준비                                                          |176,704 ns     |
+|     |├─ 3. 씬 그리기                                                            |13,980 ns      |
+|     |├─ 4. GUI 그리기                                                           |589 ns         |
+|     |└─ 5. 제시 준비                                                            |12 ns          |
 
-- 총 캡처 시간: 9,829.32 ms
+- 총 캡처 시간: 15,572.47 ms
 
 - VSync를 켰으므로 명령 큐에 제출된 Present 명령은 VSyncBlank 타이밍에 처리되고, 이 시점까지 `FlushCommandQueue()`가 CPU의 다음 프레임 렌더 시작을 블록하므로, CPU의 '2. GPU 명령 완료 대기' 시간이 늘어납니다.
 
 - 측정 환경의 모니터 주사율은 240Hz이므로 주기는 $\frac{1}{240\ \mathrm{Hz}} \approx 4.17\ \mathrm{ms}$이고 이는 CPU의 "프레임 시간" 측정값과 거의 맞아떨어집니다.
 
-- VSync에 직접적인 영향을 받지 않는 일부 구간의 시간 소요가 2배 이상 늘어난 이유는, VSync에 의한 유휴 시간이 증가하며 CPU와 GPU의 스케줄링이나 클럭이 영향을 받았을 가능성을 생각할 수 있으나, 현재 측정만으로는 특정할 수 없습니다.
+- VSync에 직접적인 영향을 받지 않는 구간의 시간 소요가 늘어난 원인으로, VSync에 의한 유휴 시간이 증가하며 CPU와 GPU의 스케줄링이나 클럭이 영향을 받았을 가능성을 고려할 수 있지만, 현 측정만으로 검증할 수는 없습니다.
 
 <br>
 
@@ -448,10 +448,10 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 
 
 ### 7.7. 빌드 관련
-"Link an executable to a DLL" (Microsoft Learn / 2026년 7월 열람)  
+"Link an executable to a DLL" (Microsoft Learn / 2026년 10월 열람)  
 [https://learn.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=msvc-170](https://learn.microsoft.com/en-us/cpp/build/linking-an-executable-to-a-dll?view=msvc-170)
 
-"Getting Started with the Agility SDK" (Microsoft Dev Blogs / 2026년 7월 열람)  
+"Getting Started with the Agility SDK" (Microsoft Dev Blogs / 2026년 10월 열람)  
 [https://devblogs.microsoft.com/directx/gettingstarted-dx12agility](https://devblogs.microsoft.com/directx/gettingstarted-dx12agility)
 
 <br>
@@ -460,13 +460,13 @@ Win32와 D3D12를 이용하여 구현 중인 실시간 렌더링 엔진입니다
 
 
 ### 7.8. 측정 관련
-"PresentMon" (GameTechDev / 2026년 7월 열람)  
+"PresentMon" (GameTechDev / 2026년 10월 열람)  
 [https://github.com/GameTechDev/PresentMon](https://github.com/GameTechDev/PresentMon)
 
-"WinPixEventRuntime" (Microsoft Dev Blogs / 2026년 7월 열람)  
+"WinPixEventRuntime" (Microsoft Dev Blogs / 2026년 10월 열람)  
 [https://devblogs.microsoft.com/pix/winpixeventruntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
 
-"Programmatic Timing Captures now available" (Microsoft Dev Blogs / 2026년 9월 열람)  
+"Programmatic Timing Captures now available" (Microsoft Dev Blogs / 2026년 10월 열람)  
 [https://devblogs.microsoft.com/pix/programmatic-timing-captures-now-available](https://devblogs.microsoft.com/pix/programmatic-timing-captures-now-available)
 
 <br>

@@ -27,11 +27,11 @@ private:
 	{
 		return std::format
 		(
-			"file: {}\n\n"
-			"function: {}\n\n"
-			"line: {}\n\n"
-			"statement: {}\n\n"
-			"pResult: {}",
+			"file : {}\n\n"
+			"function : {}\n\n"
+			"line : {}\n\n"
+			"statement : {}\n\n"
+			"pResult : {}",
 			location.file_name(),
 			location.function_name(),
 			location.line(),
