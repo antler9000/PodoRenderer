@@ -17,7 +17,7 @@
 //C++
 #include <cstring>
 
-struct ObjectConstantBuffer
+struct ObjectBuffer
 {
 	DirectX::XMFLOAT4X4 worldMatrix			= {};
 	DirectX::XMFLOAT4X4 worldInvTransMatrix = {};
@@ -42,7 +42,7 @@ public:
 		m_pMesh		= pMesh;
 		m_pMaterial	= pMaterial;
 
-		constexpr UINT			constantBufferSize	= (sizeof(ObjectConstantBuffer) + 255) & ~255;
+		constexpr UINT			constantBufferSize	= (sizeof(ObjectBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -55,11 +55,11 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_objectConstantBuffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
 			)
 		);
 
-		UpdateObjectConstantBuffer();
+		UpdateBuffer();
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
@@ -94,7 +94,7 @@ public:
 		m_scale = scale;
 	}
 
-	void UpdateObjectConstantBuffer()
+	void UpdateBuffer()
 	{
 		DirectX::XMVECTOR direction	= DirectX::XMLoadFloat4(&m_rotation);
 		DirectX::XMVECTOR scale		= DirectX::XMLoadFloat3(&m_scale);
@@ -107,16 +107,16 @@ public:
 
 		DirectX::XMMATRIX worldInvMatrix = XMMatrixInverse(nullptr, worldMatrix);
 
-		ObjectConstantBuffer objectConstantBufferData = {};
+		ObjectBuffer objectConstantBufferData = {};
 		XMStoreFloat4x4(&objectConstantBufferData.worldMatrix, XMMatrixTranspose(worldMatrix));
 		XMStoreFloat4x4(&objectConstantBufferData.worldInvTransMatrix, worldInvMatrix);
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_objectConstantBuffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));
-		m_objectConstantBuffer->Unmap(0, nullptr);
+		m_buffer->Unmap(0, nullptr);
 	}
 
 	const Mesh* GetMesh() const
@@ -129,36 +129,36 @@ public:
 		return m_pMaterial;
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetObjectConstantBufferGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
-		return m_objectConstantBuffer->GetGPUVirtualAddress();
+		return m_buffer->GetGPUVirtualAddress();
 	}
 	
-	UINT GetObjectConstantBufferWidth() const
+	UINT GetBufferWidth() const
 	{
-		return static_cast<UINT>(m_objectConstantBuffer->GetDesc().Width);
+		return static_cast<UINT>(m_buffer->GetDesc().Width);
 	}
 
-	void SetObjectConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
 		m_objectConstantBufferViewGPUHandle = handle;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE GetObjectConstantBufferViewGPUHandle() const
+	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
 	{
 		return m_objectConstantBufferViewGPUHandle;
 	}
 
 private:
 
-	const Mesh* m_pMesh		= {};
-	Material* m_pMaterial	= {};
+	const Mesh*	m_pMesh		= {};
+	Material*	m_pMaterial	= {};
 
 	DirectX::XMFLOAT3 m_scale		= { 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT4 m_rotation	= { 0.0f, 0.0f, 0.0f, 1.0f };
 	DirectX::XMFLOAT3 m_position	= { 0.0f, 0.0f, 0.0f };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_objectConstantBuffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
 
 	D3D12_GPU_DESCRIPTOR_HANDLE m_objectConstantBufferViewGPUHandle = {};
 };

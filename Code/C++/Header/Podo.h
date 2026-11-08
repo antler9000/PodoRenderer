@@ -10,6 +10,7 @@
 #include "Light.h"
 #include "Object.h"
 #include "Material.h"
+#include "Texture.h"
 #include "Mesh.h"
 #include "Alloc.h"
 
@@ -115,6 +116,7 @@ private:
 	void ResetRTV();
 	void ResetDSV();
 	void ResetMeshes();
+	void ResetTextures();
 	void ResetMaterials();
 	void ResetObjects();
 	void ResetLights();
@@ -211,6 +213,7 @@ private:
 	ComPtr<ID3D12Resource>						m_screenDepthStencilBuffer							= {};
 	
 	std::unordered_map<std::string, Mesh>		m_workloadMeshes									= {};
+	std::unordered_map<std::string, Texture>	m_workloadTextures									= {};
 	std::unordered_map<std::string, Material>	m_workloadMaterials									= {};
 	std::unordered_map<std::string, Object>		m_workloadObjects									= {};
 	std::unordered_map<std::string, Light>		m_workloadLights									= {};

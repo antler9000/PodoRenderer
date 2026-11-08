@@ -17,7 +17,7 @@
 #include <cstdint>
 
 //NOTE: C++의 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
-struct CameraConstantBuffer
+struct CameraBuffer
 {
 	DirectX::XMFLOAT3	eyePos			= {};
 	std::uint32_t		padding			= {};
@@ -39,7 +39,7 @@ public:
 
 	void Create(ID3D12Device* pDevice)
 	{
-		constexpr UINT			constantBufferSize	= (sizeof(CameraConstantBuffer) + 255) & ~255;
+		constexpr UINT			constantBufferSize	= (sizeof(CameraBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -52,11 +52,11 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_cameraConstantBuffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
 			)
 		);
 
-		UpdateCameraConstantBuffer(1.0f);
+		UpdateBuffer(1.0f);
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
@@ -76,7 +76,7 @@ public:
 	}
 
 	//NOTE: (m_target - m_position)와 m_upDirection가 영벡터에 가깝지 않고, 서로 평행에 가깝지 않음을 호출부에서 책임져야 함
-	void UpdateCameraConstantBuffer(float aspectRatio)
+	void UpdateBuffer(float aspectRatio)
 	{
 		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
 		DirectX::XMVECTOR target		= DirectX::XMLoadFloat3(&m_target);
@@ -88,21 +88,21 @@ public:
 
 		DirectX::XMMATRIX viewProjMatrix = viewMatrix * projectionMatrix;
 
-		CameraConstantBuffer cameraConstantBufferData = {};
+		CameraBuffer cameraConstantBufferData = {};
 		DirectX::XMStoreFloat3(&cameraConstantBufferData.eyePos, position);
 		DirectX::XMStoreFloat4x4(&cameraConstantBufferData.viewProjMatrix, DirectX::XMMatrixTranspose(viewProjMatrix));
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_cameraConstantBuffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
-		m_cameraConstantBuffer->Unmap(0, nullptr);
+		m_buffer->Unmap(0, nullptr);
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetCameraConstantBufferGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
-		return m_cameraConstantBuffer->GetGPUVirtualAddress();
+		return m_buffer->GetGPUVirtualAddress();
 	}
 
 private:
@@ -111,5 +111,5 @@ private:
 	DirectX::XMFLOAT3 m_target		= { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT3 m_upDirection	= { 0.0f, 1.0f, 0.0f };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraConstantBuffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
 };

@@ -105,6 +105,9 @@
     <ClInclude Include="Code\Common\Common.h">
       <Filter>Code\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Code\C++\Header\Texture.h">
+      <Filter>Code\C++\Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\imgui\imgui.cpp">

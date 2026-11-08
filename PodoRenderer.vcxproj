@@ -40,6 +40,7 @@
     <ClInclude Include="Code\C++\Header\Podo.h" />
     <ClInclude Include="Code\C++\Header\Root.h" />
     <ClInclude Include="Code\C++\Header\State.h" />
+    <ClInclude Include="Code\C++\Header\Texture.h" />
     <ClInclude Include="Code\C++\Header\Timer.h" />
     <ClInclude Include="Code\Common\Common.h" />
     <ClInclude Include="External\imgui\backends\imgui_impl_dx12.h" />

@@ -9,6 +9,7 @@
 #include "Light.h"
 #include "Object.h"
 #include "Material.h"
+#include "Texture.h"
 #include "Mesh.h"
 #include "Root.h"
 #include "Debug.h"
@@ -123,7 +124,7 @@ void Podo::UpdateWorld()
 		horizontalBoxObject.SetScale(scale);
 		horizontalBoxObject.SetRotation(lookDirection, upDirection);
 		horizontalBoxObject.SetPosition(position);
-		horizontalBoxObject.UpdateObjectConstantBuffer();
+		horizontalBoxObject.UpdateBuffer();
 	}
 
 	{
@@ -136,13 +137,13 @@ void Podo::UpdateWorld()
 		verticalBoxObject.SetScale(scale);
 		verticalBoxObject.SetRotation(lookDirection, upDirection);
 		verticalBoxObject.SetPosition(position);
-		verticalBoxObject.UpdateObjectConstantBuffer();
+		verticalBoxObject.UpdateBuffer();
 	}
 
 	{
 		Light& mainLight = m_workloadLights.at("MainLight");
 
-		constexpr float speed = 0.2f;
+		float speed = 0.2f;
 
 		float directionAngleXZ = timeSecond * speed;
 
@@ -152,15 +153,15 @@ void Podo::UpdateWorld()
 		DirectX::XMFLOAT3 ambient	= { 0.1f, 0.1f, 0.2f };
 		mainLight.SetDirectionalLight("Sun", sun);
 		mainLight.SetAmbientLight(ambient);
-		mainLight.UpdateLightConstantBuffer();
+		mainLight.UpdateBuffer();
 	}
 
 	{
 		Camera& mainCamera = m_workloadCameras.at("MainCamera");
 
-		constexpr float radius	= 10.0f;
-		constexpr float height	= 5.0f;
-		constexpr float speed	= 0.3f;
+		float radius	= 10.0f;
+		float height	= 5.0f;
+		float speed		= 0.3f;
 
 		float orbitAngle = timeSecond * speed;
 
@@ -177,7 +178,7 @@ void Podo::UpdateWorld()
 		mainCamera.SetPosition(cameraPosition);
 		mainCamera.SetTarget(cameraTarget);
 		mainCamera.SetUpDirection(cameraUp);
-		mainCamera.UpdateCameraConstantBuffer(m_screenBackBufferAspectRatio);
+		mainCamera.UpdateBuffer(m_screenBackBufferAspectRatio);
 	}
 }
 
@@ -243,18 +244,25 @@ void Podo::UpdateRender()
 
 			m_commandList->SetGraphicsRootConstantBufferView
 			(
-				LIGHT_CONSTANT,
-				m_workloadLights["MainLight"].GetLightConstantBufferGPUAddress()
+				CAMERA_CONSTANT,
+				m_workloadCameras["MainCamera"].GetBufferGPUAddress()
 			);
 
 			m_commandList->SetGraphicsRootConstantBufferView
 			(
-				CAMERA_CONSTANT,
-				m_workloadCameras["MainCamera"].GetCameraConstantBufferGPUAddress()
+				LIGHT_CONSTANT,
+				m_workloadLights["MainLight"].GetBufferGPUAddress()
 			);
 
+			//NOTE: 일단 오브젝트를 중심으로 순회하는 반복문을 임시로 사용하기로 함
 			for (const auto& [name, object] : m_workloadObjects)
 			{
+				m_commandList->SetGraphicsRootDescriptorTable
+				(
+					OBJECT_CONSTANT,
+					object.GetConstantBufferViewGPUHandle()
+				);
+
 				const Mesh* pMesh = object.GetMesh();
 				m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
 				m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
@@ -263,15 +271,16 @@ void Podo::UpdateRender()
 				m_commandList->SetGraphicsRootDescriptorTable
 				(
 					MATERIAL_CONSTANT,
-					pMaterial->GetMaterialConstantBufferViewGPUHandle()
+					pMaterial->GetConstantBufferViewGPUHandle()
 				);
 
+				const Texture* pTexture = pMaterial->GetTexture();
 				m_commandList->SetGraphicsRootDescriptorTable
 				(
-					OBJECT_CONSTANT,
-					object.GetObjectConstantBufferViewGPUHandle()
+					TEXTURE_CONSTANT,
+					pTexture->GetShaderResourceViewGPUHandle()
 				);
-
+				
 				m_commandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
 			}
 		}

@@ -30,7 +30,7 @@ struct DirectionalLight
 
 //NOTE: C++의 DirectionalLight는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 //		또한 어레이로 사용할 경우에 16바이트 경계로 맞춰질 수 있도록 끝에 패딩을 추가함
-struct LightConstantBuffer
+struct LightBuffer
 {
 	std::uint32_t		directionalLightsNum						= {};
 	std::uint32_t		padding1[3]									= {};
@@ -54,7 +54,7 @@ public:
 
 	void Create(ID3D12Device* pDevice)
 	{
-		constexpr UINT			constantBufferSize	= (sizeof(LightConstantBuffer) + 255) & ~255;
+		constexpr UINT			constantBufferSize	= (sizeof(LightBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -67,11 +67,11 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_lightConstantBuffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
 			)
 		);
 
-		UpdateLightConstantBuffer();
+		UpdateBuffer();
 	}
 
 	//NOTE: 셰이더의 라이트 상수 버퍼에 담길 수 있는 최대 방향성 광원의 수를 초과하는 경우 false를 반환함
@@ -100,9 +100,9 @@ public:
 		m_ambientLight = ambientLight;
 	}
 
-	void UpdateLightConstantBuffer()
+	void UpdateBuffer()
 	{
-		LightConstantBuffer lightConstantBufferData = {};
+		LightBuffer lightConstantBufferData = {};
 		lightConstantBufferData.directionalLightsNum = static_cast<uint32_t>(m_directionalLights.size());
 		int i = 0;
 		for (const auto& [name, light] : m_directionalLights)
@@ -116,14 +116,14 @@ public:
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_lightConstantBuffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &lightConstantBufferData, sizeof(lightConstantBufferData));
-		m_lightConstantBuffer->Unmap(0, nullptr);
+		m_buffer->Unmap(0, nullptr);
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetLightConstantBufferGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
-		return m_lightConstantBuffer->GetGPUVirtualAddress();
+		return m_buffer->GetGPUVirtualAddress();
 	}
 
 private:
@@ -131,5 +131,5 @@ private:
 	std::unordered_map<std::string, DirectionalLight>	m_directionalLights	= {};
 	DirectX::XMFLOAT3									m_ambientLight		= {};
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_lightConstantBuffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
 };
