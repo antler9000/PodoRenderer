@@ -17,10 +17,10 @@ struct ImGuiDescriptorHeapAllocator
     D3D12_DESCRIPTOR_HEAP_TYPE  HeapType    = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
     D3D12_CPU_DESCRIPTOR_HANDLE HeapStartCpu;
     D3D12_GPU_DESCRIPTOR_HANDLE HeapStartGpu;
-    UINT                        HeapHandleIncrement;
+    unsigned int                HeapHandleIncrement;
     ImVector<int>               FreeIndices;
 
-    void Create(ID3D12Device* pGivenDevice, ID3D12DescriptorHeap* pGivenHeap, UINT capacity)
+    void Create(ID3D12Device* pGivenDevice, ID3D12DescriptorHeap* pGivenHeap, unsigned int capacity)
     {
         IM_ASSERT(pHeap == nullptr && FreeIndices.empty());
         pHeap = pGivenHeap;

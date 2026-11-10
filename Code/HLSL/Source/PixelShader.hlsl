@@ -1,4 +1,3 @@
-#include "../../Common/Common.h"
 #include "VertexShader.hlsl"
 
 float4 PS(in OutVertex outVertex) : SV_TARGET
@@ -13,8 +12,8 @@ float4 PS(in OutVertex outVertex) : SV_TARGET
     
     float3 specularLight    = float3(0.0f, 0.0f, 0.0f);
     float3 diffuseLight     = float3(0.0f, 0.0f, 0.0f);
-    float3 ambientLight     = gAmbientLight * sampledDiffuseAlbedo * gDiffuseAlbedo;
-    for (uint i = 0; i < min(gDirectionalLightsNum, MAX_DIRECTIONAL_LIGHTS); i++)
+    float3 ambientLight     = gAmbientLightStrength * sampledDiffuseAlbedo * gDiffuseAlbedo;
+    for (uint i = 0; i < gDirectionalLightsNum; i++)
     {
         float3  lightVec        = normalize(-1 * gDirectionalLights[i].direction);
         float3  halfVec         = normalize(toEyeVec + lightVec);

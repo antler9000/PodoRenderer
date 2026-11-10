@@ -54,7 +54,7 @@ private:
 
 	//NOTE:	static 메서드는 객체에 얽힌 메서드가 아니기에 this가 없으므로, 멤버 변수에 접근할 수가 없음
 	//		이를 해결하기 위해 CreatWindowEx의 마지막 매개변수, SetWindowLongPtr 함수, GetWindowLongPtr 함수를 이용함
-	static LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	static LRESULT CALLBACK WindowProcedure(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		DerivedApp* pThis = nullptr;
 

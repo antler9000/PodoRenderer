@@ -4,7 +4,6 @@
 #include "Debug.h"
 
 //Win32
-#include <windows.h>
 #include <wrl/client.h>
 
 //D3D12
@@ -21,7 +20,6 @@
 #include <utility>
 #include <cstdint>
 
-//NOTE: 셰이더 정점은 입력 서명에서 각 성분의 오프셋을 지정하므로, 셰이더 상수 버퍼와 달리 패딩을 추가할 필요가 없음
 struct Vertex
 {
 	DirectX::XMFLOAT3 pos		= {};
@@ -50,8 +48,8 @@ public:
 		std::vector<uint32_t>&& indices
 	)
 	{
-		m_vertexCount	= static_cast<UINT>(vertices.size());
-		m_indexCount	= static_cast<UINT>(indices.size());
+		m_vertexCount	= static_cast<unsigned int>(vertices.size());
+		m_indexCount	= static_cast<unsigned int>(indices.size());
 
 		ThrowIfFailed
 		(
@@ -90,22 +88,22 @@ public:
 		};
 	}
 
-	UINT GetVertexCount() const
+	unsigned int GetVertexCount() const
 	{
 		return m_vertexCount;
 	}
 
-	UINT GetVertexBufferSize() const
+	unsigned int GetVertexBufferSize() const
 	{
 		return m_vertexCount * sizeof(Vertex);
 	}
 
-	UINT GetIndexCount() const
+	unsigned int GetIndexCount() const
 	{
 		return m_indexCount;
 	}
 
-	UINT GetIndexBufferSize() const
+	unsigned int GetIndexBufferSize() const
 	{
 		return m_indexCount * sizeof(uint32_t);
 	}
@@ -122,8 +120,8 @@ public:
 
 private:
 
-	UINT m_vertexCount	= {};
-	UINT m_indexCount	= {};
+	unsigned int m_vertexCount	= {};
+	unsigned int m_indexCount	= {};
 
 	Microsoft::WRL::ComPtr<ID3D12Resource>	m_vertexBuffer	= {};
 	Microsoft::WRL::ComPtr<ID3D12Resource>	m_indexBuffer	= {};

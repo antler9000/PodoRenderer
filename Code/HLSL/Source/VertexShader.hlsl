@@ -1,6 +1,3 @@
-//NOTE: 프로젝트 구성의 HLSL 추가 포함 디렉토리에 Common 폴더를 추가해도, 상수가 미정의되었다는 거짓 보고가 발생해 상대 경로를 명시함
-#include "../../Common/Common.h"
-
 struct InVertex
 {
     float3 posL     : POSITION;
@@ -16,40 +13,38 @@ struct OutVertex
     float2 texCoord : TEXCOORD;
 };
 
-struct DirectionalLight
+struct Light
 {
-    float3 strength;
-    float3 direction;
+    float3      strength;
+    float3      direction;
+    float4x4    orthoViewPorj;
 };
 
 SamplerState gSamplerPointWrap      : register(s0);
 SamplerState gSamplerLinearWrap     : register(s1);
 SamplerState gSamplerAnisotropic    : register(s2);
 
-Texture2D gDiffuseMap : register(t0);
+Texture2D gDiffuseMap : register(t0, space0);
 
-cbuffer Material : register(b0)
+cbuffer Material : register(b0, space0)
 {
     float3  gDiffuseAlbedo;
     float3  gFresnelR0;
     float   gShininess;
 }
 
-cbuffer Object : register(b1)
+cbuffer Object : register(b1, space0)
 {
     float4x4 gWorld;
     float4x4 gInvTransWorld;
 }
 
-cbuffer Light : register(b2)
-{
-    uint                gDirectionalLightsNum;
-    DirectionalLight    gDirectionalLights[MAX_DIRECTIONAL_LIGHTS];
-    float3              gAmbientLight;
-}
+ConstantBuffer<Light> gDirectionalLights[] : register(b0, space1);
 
-cbuffer Camera : register(b3)
+cbuffer Camera : register(b2, space0)
 {
+    uint        gDirectionalLightsNum;
+    float3      gAmbientLightStrength;
     float3      gEyePosW;
     float4x4    gViewProj;
 }

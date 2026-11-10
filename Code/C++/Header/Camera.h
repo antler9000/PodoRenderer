@@ -19,9 +19,11 @@
 //NOTE: C++의 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 struct CameraBuffer
 {
-	DirectX::XMFLOAT3	eyePos			= {};
-	std::uint32_t		padding			= {};
-	DirectX::XMFLOAT4X4 viewProjMatrix	= {};
+	std::uint32_t		directionalLightsNum	= {};
+	DirectX::XMFLOAT3	ambientLightStrength	= {};
+	DirectX::XMFLOAT3	eyePos					= {};
+	std::uint32_t		padding					= {};
+	DirectX::XMFLOAT4X4 viewProj				= {};
 };
 
 class Camera
@@ -39,7 +41,7 @@ public:
 
 	void Create(ID3D12Device* pDevice)
 	{
-		constexpr UINT			constantBufferSize	= (sizeof(CameraBuffer) + 255) & ~255;
+		constexpr unsigned int	constantBufferSize	= (sizeof(CameraBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -52,14 +54,24 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_cameraConstantBuffer.ReleaseAndGetAddressOf())
 			)
 		);
 
-		UpdateBuffer(1.0f);
+		UpdateBuffer();
 	}
 
-	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
+	void SetDirectionalLightsNum(unsigned int directionalLightsNum)
+	{
+		m_directionalLightsNum = directionalLightsNum;
+	}
+
+	void SetAmbientLightStrength(DirectX::XMFLOAT3 ambientLightStrength)
+	{
+		m_ambientLightStrength = ambientLightStrength;
+	}
+
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
 	void SetPosition(DirectX::XMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
@@ -75,41 +87,69 @@ public:
 		DirectX::XMStoreFloat3(&m_upDirection, upDirection);
 	}
 
+	void SetHorizontalFOV(float horizontalFOV)
+	{
+		m_horizontalFOV = horizontalFOV;
+	}
+
+	void SetAspectRatio(float aspectRatio)
+	{
+		m_aspectRatio = aspectRatio;
+	}
+
+	void SetNearZ(float nearZ)
+	{
+		m_nearZ = nearZ;
+	}
+
+	void SetFarZ(float farZ)
+	{
+		m_farZ = farZ;
+	}
+
 	//NOTE: (m_target - m_position)와 m_upDirection가 영벡터에 가깝지 않고, 서로 평행에 가깝지 않음을 호출부에서 책임져야 함
-	void UpdateBuffer(float aspectRatio)
+	void UpdateBuffer()
 	{
 		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
 		DirectX::XMVECTOR target		= DirectX::XMLoadFloat3(&m_target);
 		DirectX::XMVECTOR upDirection	= DirectX::XMLoadFloat3(&m_upDirection);
 
-		DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(position, target, upDirection);
-
-		DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, aspectRatio, 0.1f, 1000.0f);
-
+		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookAtLH(position, target, upDirection);
+		DirectX::XMMATRIX projectionMatrix	= DirectX::XMMatrixPerspectiveFovLH(m_horizontalFOV, m_aspectRatio, m_nearZ, m_farZ);
+		
 		DirectX::XMMATRIX viewProjMatrix = viewMatrix * projectionMatrix;
 
 		CameraBuffer cameraConstantBufferData = {};
+		cameraConstantBufferData.directionalLightsNum	= m_directionalLightsNum;
+		cameraConstantBufferData.ambientLightStrength	= m_ambientLightStrength;
 		DirectX::XMStoreFloat3(&cameraConstantBufferData.eyePos, position);
-		DirectX::XMStoreFloat4x4(&cameraConstantBufferData.viewProjMatrix, DirectX::XMMatrixTranspose(viewProjMatrix));
+		DirectX::XMStoreFloat4x4(&cameraConstantBufferData.viewProj, DirectX::XMMatrixTranspose(viewProjMatrix));
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_cameraConstantBuffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
-		m_buffer->Unmap(0, nullptr);
+		m_cameraConstantBuffer->Unmap(0, nullptr);
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
-		return m_buffer->GetGPUVirtualAddress();
+		return m_cameraConstantBuffer->GetGPUVirtualAddress();
 	}
 
 private:
 
-	DirectX::XMFLOAT3 m_position	= { 0.0f, 5.0f, -5.0f };
-	DirectX::XMFLOAT3 m_target		= { 0.0f, 0.0f, 0.0f };
-	DirectX::XMFLOAT3 m_upDirection	= { 0.0f, 1.0f, 0.0f };
+	unsigned int		m_directionalLightsNum	= {};
+	DirectX::XMFLOAT3	m_ambientLightStrength	= {};
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
+	DirectX::XMFLOAT3	m_position		= { 0.0f, 0.0f, -5.0f };
+	DirectX::XMFLOAT3	m_target		= { 0.0f, 0.0f, 0.0f };
+	DirectX::XMFLOAT3	m_upDirection	= { 0.0f, 1.0f, 0.0f };
+	float				m_horizontalFOV	= DirectX::XM_PIDIV4;
+	float				m_aspectRatio	= 1.0f;
+	float				m_nearZ			= 0.1f;
+	float				m_farZ			= 1000.0f;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraConstantBuffer = {};
 };

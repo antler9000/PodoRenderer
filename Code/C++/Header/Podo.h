@@ -24,6 +24,7 @@
 //D3D12
 #include <d3dx12_root_signature.h>
 #include <d3d12.h>
+#include <DirectXMath.h>
 
 //DXGI
 #include <dxgi1_6.h>
@@ -33,7 +34,7 @@
 #include <dxgiformat.h>
 
 //C++
-#include <unordered_map>
+#include <map>
 #include <string>
 #include <fstream>
 
@@ -104,23 +105,23 @@ private:
 	void ResetCommandQueue();
 	void ResetCommandAllocator();
 	void ResetCommandList();
-	void ResetDescriptorHeapRTV();
-	void ResetDescriptorHeapDSV();
-	void ResetDescriptorHeapCBVSRVUAV();
 	void ResetHDRSwapChainSupport();
 	void ResetSwapChain();
 	void ResetBackBufferInfo();
 	void ResetViewPort();
 	void ResetScissorRectangle();
 	void ResetDepthStencilBuffer();
-	void ResetRTV();
-	void ResetDSV();
 	void ResetMeshes();
 	void ResetTextures();
 	void ResetMaterials();
 	void ResetObjects();
 	void ResetLights();
 	void ResetCameras();
+	void ResetDescriptorHeapRTV();
+	void ResetDescriptorHeapDSV();
+	void ResetDescriptorHeapCBVSRVUAV();
+	void ResetRTV();
+	void ResetDSV();
 	void ResetCBVSRVUAV();
 	void ResetRootSignature();
 	void ResetPipelineStateObject();
@@ -149,23 +150,25 @@ private:
 
 private:
 
-	static constexpr	UINT							m_screenBackBufferCount						= 2;
-	static constexpr	DXGI_FORMAT						m_screenBackBufferFormatSDR					= DXGI_FORMAT_R8G8B8A8_UNORM;
-	static constexpr	DXGI_FORMAT						m_screenBackBufferFormatHDR					= DXGI_FORMAT_R10G10B10A2_UNORM;
-	static constexpr	DXGI_FORMAT						m_screenRTVFormatSDR						= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	static constexpr	DXGI_FORMAT						m_screenRTVFormatHDR						= DXGI_FORMAT_R10G10B10A2_UNORM;
-	static constexpr	DXGI_COLOR_SPACE_TYPE			m_screenBackBufferColorSpaceSDR				= DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
-	static constexpr	DXGI_COLOR_SPACE_TYPE			m_screenBackBufferColorSpaceHDR				= DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
-	static constexpr	DXGI_FORMAT						m_screenDepthStencilBufferFormat			= DXGI_FORMAT_D24_UNORM_S8_UINT;
+	static constexpr	unsigned int					screenBackBufferCount						= 2;
+	static constexpr	DXGI_FORMAT						screenBackBufferFormatSDR					= DXGI_FORMAT_R8G8B8A8_UNORM;
+	static constexpr	DXGI_FORMAT						screenBackBufferFormatHDR					= DXGI_FORMAT_R10G10B10A2_UNORM;
+	static constexpr	DXGI_FORMAT						screenRTVFormatSDR							= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	static constexpr	DXGI_FORMAT						screenRTVFormatHDR							= DXGI_FORMAT_R10G10B10A2_UNORM;
+	static constexpr	DXGI_COLOR_SPACE_TYPE			screenBackBufferColorSpaceSDR				= DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+	static constexpr	DXGI_COLOR_SPACE_TYPE			screenBackBufferColorSpaceHDR				= DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+	static constexpr	DXGI_FORMAT						screenDepthStencilBufferFormat				= DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-	static constexpr	UINT							m_descriptorHeapCBVSRVUAVCapacityForGUI		= 64;
-	static constexpr	UINT							m_descriptorHeapCBVSRVUAVCapacityForRender	= 64;
+	static constexpr	float							cameraHorizontalFOV							= DirectX::XM_PIDIV4;
+	static constexpr	float							cameraNearZ									= 0.1f;
+	static constexpr	float							cameraFarZ									= 1000.0f;
 
-	static constexpr	ImVec2							m_imGuiSpacingBasicSize						= ImVec2(0.0f, 10.0f);
-	static constexpr	ImVec2							m_imGuiSmallButtonBasicSize					= ImVec2(120.0f, 40.0f);
-	static constexpr	ImVec2							m_imGuiMediumButtonBasicSize				= ImVec2(240.0f, 40.0f);
-	static constexpr	ImVec2							m_imGuiLargeButtonBasicSize					= ImVec2(360.0f, 40.0f);
-	static constexpr	ImGuiWindowFlags				m_imGuiBasicFlag							= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+	static constexpr	unsigned int					imGuiDescriptorCapacity						= 64;
+	static constexpr	ImVec2							imGuiSpacingBasicSize						= ImVec2(0.0f, 10.0f);
+	static constexpr	ImVec2							imGuiSmallButtonBasicSize					= ImVec2(120.0f, 40.0f);
+	static constexpr	ImVec2							imGuiMediumButtonBasicSize					= ImVec2(240.0f, 40.0f);
+	static constexpr	ImVec2							imGuiLargeButtonBasicSize					= ImVec2(360.0f, 40.0f);
+	static constexpr	ImGuiWindowFlags				imGuiBasicFlag								= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
 																									| ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
 private:
@@ -189,6 +192,23 @@ private:
 	ComPtr<ID3D12CommandAllocator>				m_commandAllocator									= {};
 	ComPtr<ID3D12GraphicsCommandList>			m_commandList										= {};
 	
+	ComPtr<IDXGISwapChain3>						m_screenSwapChain									= {};	//NOTE: (기본) 백 버퍼 인덱스 추적
+	ComPtr<ID3D12Resource>						m_screenBackBuffers[screenBackBufferCount]			= {};
+	unsigned int								m_screenBackBufferIndex								= {};
+	unsigned int								m_screenBackBufferWidth								= {};
+	unsigned int								m_screenBackBufferHeight							= {};
+	float										m_screenBackBufferAspectRatio						= {};
+	D3D12_VIEWPORT								m_screenViewPort									= {};
+	D3D12_RECT									m_screenScissorRectangle							= {};
+	ComPtr<ID3D12Resource>						m_screenDepthStencilBuffer							= {};
+	
+	std::map<std::string, Mesh>					m_workloadMeshes									= {};
+	std::map<std::string, Texture>				m_workloadTextures									= {};
+	std::map<std::string, Material>				m_workloadMaterials									= {};
+	std::map<std::string, Object>				m_workloadObjects									= {};
+	std::map<std::string, Light>				m_workloadLights									= {};
+	std::map<std::string, Camera>				m_workloadCameras									= {};
+
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapRTV									= {};
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapDSV									= {};
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapCBVSRVUAV							= {};
@@ -198,26 +218,9 @@ private:
 	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI		= {};
 	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleCPUForScene		= {};
 	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleGPUForScene		= {};
-	UINT										m_descriptorHeapRTVIncrementSize					= {};
-	UINT										m_descriptorHeapDSVIncrementSize					= {};
-	UINT										m_descriptorHeapCBVSRVUAVIncrementSize				= {};
-
-	ComPtr<IDXGISwapChain3>						m_screenSwapChain									= {};	//NOTE: (기본) 백 버퍼 인덱스 추적
-	ComPtr<ID3D12Resource>						m_screenBackBuffers[m_screenBackBufferCount]		= {};
-	UINT										m_screenBackBufferIndex								= {};
-	UINT										m_screenBackBufferWidth								= {};
-	UINT										m_screenBackBufferHeight							= {};
-	float										m_screenBackBufferAspectRatio						= {};
-	D3D12_VIEWPORT								m_screenViewPort									= {};
-	D3D12_RECT									m_screenScissorRectangle							= {};
-	ComPtr<ID3D12Resource>						m_screenDepthStencilBuffer							= {};
-	
-	std::unordered_map<std::string, Mesh>		m_workloadMeshes									= {};
-	std::unordered_map<std::string, Texture>	m_workloadTextures									= {};
-	std::unordered_map<std::string, Material>	m_workloadMaterials									= {};
-	std::unordered_map<std::string, Object>		m_workloadObjects									= {};
-	std::unordered_map<std::string, Light>		m_workloadLights									= {};
-	std::unordered_map<std::string, Camera>		m_workloadCameras									= {};
+	unsigned int								m_descriptorHeapRTVIncrementSize					= {};
+	unsigned int								m_descriptorHeapDSVIncrementSize					= {};
+	unsigned int								m_descriptorHeapCBVSRVUAVIncrementSize				= {};
 
 	ComPtr<ID3D12RootSignature>					m_renderConfigureRootSignature						= {};
 	ComPtr<ID3D12PipelineState>					m_renderConfigurePipelineStateObject				= {};
@@ -235,6 +238,8 @@ private:
 	bool										m_needResetSwapChain								= true;
 	bool										NeedResetWorkload() const							{ return m_needResetWorkload; }
 	bool										m_needResetWorkload									= true;
+	bool										NeedResetDescriptor() const							{ return m_needResetDescriptor; };
+	bool										m_needResetDescriptor								= true;
 	bool										NeedResetRenderConfigure() const					{ return m_needResetRenderConfigure; }
 	bool										m_needResetRenderConfigure							= true;
 

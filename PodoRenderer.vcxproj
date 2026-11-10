@@ -42,7 +42,6 @@
     <ClInclude Include="Code\C++\Header\State.h" />
     <ClInclude Include="Code\C++\Header\Texture.h" />
     <ClInclude Include="Code\C++\Header\Timer.h" />
-    <ClInclude Include="Code\Common\Common.h" />
     <ClInclude Include="External\imgui\backends\imgui_impl_dx12.h" />
     <ClInclude Include="External\imgui\backends\imgui_impl_win32.h" />
     <ClInclude Include="External\imgui\imconfig.h" />
@@ -251,6 +250,7 @@
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <ShaderModel>6.6</ShaderModel>
+      <AdditionalOptions>-Qembed_debug %(AdditionalOptions)</AdditionalOptions>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

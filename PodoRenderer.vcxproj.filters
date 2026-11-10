@@ -34,9 +34,6 @@
     <Filter Include="Code\HLSL\Header">
       <UniqueIdentifier>{8341c6b8-e754-447c-9d5f-4704be2434ae}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Code\Common">
-      <UniqueIdentifier>{c7a90b29-1462-4afa-ab68-391271df93e4}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\imconfig.h">
@@ -101,9 +98,6 @@
     </ClInclude>
     <ClInclude Include="Code\C++\Header\Timer.h">
       <Filter>Code\C++\Header</Filter>
-    </ClInclude>
-    <ClInclude Include="Code\Common\Common.h">
-      <Filter>Code\Common</Filter>
     </ClInclude>
     <ClInclude Include="Code\C++\Header\Texture.h">
       <Filter>Code\C++\Header</Filter>

@@ -83,7 +83,7 @@ void Podo::UpdateCaption()
 	captionTimer.Start();
 	captionTimer.Update();
 
-	//NOTE: SetWindowTextW를 너무 자주 호출하면 시스템 부하로 인해 윈도우 전체가 먹통이 되니 반복에 텀을 주자
+	//NOTE: SetWindowTextW를 너무 자주 호출하면 시스템 부하로 인해 윈도우 전체가 먹통이 되어 반복에 텀을 주었음
 	if (captionTimer.GetTimeMilli() > 100.0f)
 	{
 		int fps = (m_worldTimerFrame.GetTimeMilli() != 0) ? static_cast<int>(1000 / m_worldTimerFrame.GetTimeMilli()) : 0;
@@ -115,45 +115,73 @@ void Podo::UpdateWorld()
 	float oscillation	= XMScalarSin(timeSecond) * 1.5f;
 
 	{
-		Object& horizontalBoxObject = m_workloadObjects.at("HorizontalBoxObject");
+		Object& horizontalSteelBoxObject = m_workloadObjects.at("HorizontalSteelBoxObject");
 
-		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		DirectX::XMVECTOR position		= XMVectorSet(oscillation, 0.0f, 3.0f, 1.0f);
-		horizontalBoxObject.SetScale(scale);
-		horizontalBoxObject.SetRotation(lookDirection, upDirection);
-		horizontalBoxObject.SetPosition(position);
-		horizontalBoxObject.UpdateBuffer();
+		XMFLOAT3 scale			= XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMVECTOR lookDirection	= XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
+		XMVECTOR upDirection	= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR position		= XMVectorSet(oscillation, 0.0f, 3.0f, 1.0f);
+		horizontalSteelBoxObject.SetScale(scale);
+		horizontalSteelBoxObject.SetRotation(lookDirection, upDirection);
+		horizontalSteelBoxObject.SetPosition(position);
+		horizontalSteelBoxObject.UpdateBuffer();
 	}
 
 	{
-		Object& verticalBoxObject = m_workloadObjects.at("VerticalBoxObject");
+		Object& verticalWoodBoxObject = m_workloadObjects.at("VerticalWoodBoxObject");
 
-		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		DirectX::XMVECTOR position		= XMVectorSet(2.0f, oscillation, 5.0f, 1.0f);
-		verticalBoxObject.SetScale(scale);
-		verticalBoxObject.SetRotation(lookDirection, upDirection);
-		verticalBoxObject.SetPosition(position);
-		verticalBoxObject.UpdateBuffer();
+		XMFLOAT3 scale			= XMFLOAT3(1.0f, 1.0f, 1.0f);
+		XMVECTOR lookDirection	= XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+		XMVECTOR upDirection	= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR position		= XMVectorSet(2.0f, oscillation, 5.0f, 1.0f);
+		verticalWoodBoxObject.SetScale(scale);
+		verticalWoodBoxObject.SetRotation(lookDirection, upDirection);
+		verticalWoodBoxObject.SetPosition(position);
+		verticalWoodBoxObject.UpdateBuffer();
 	}
 
 	{
-		Light& mainLight = m_workloadLights.at("MainLight");
+		Light& RedSun = m_workloadLights.at("RedSun");
 
-		float speed = 0.2f;
+		float radius	= 100.0f;
+		float height	= 100.0f;
+		float speed		= 0.1f;
 
-		float directionAngleXZ = timeSecond * speed;
+		float orbitAngle = timeSecond * speed;
 
-		DirectionalLight sun		= {};
-		sun.strength				= { 1.0f, 0.7f, 0.7f };
-		sun.direction				= { XMScalarCos(directionAngleXZ), -0.3f, XMScalarSin(directionAngleXZ)};
-		DirectX::XMFLOAT3 ambient	= { 0.1f, 0.1f, 0.2f };
-		mainLight.SetDirectionalLight("Sun", sun);
-		mainLight.SetAmbientLight(ambient);
-		mainLight.UpdateBuffer();
+		XMFLOAT3 strength	= { 1.0f, 0.5f, 0.1f };
+		XMVECTOR direction	= XMVectorSet(-XMScalarCos(orbitAngle) * radius, -height, -XMScalarSin(orbitAngle) * radius, 0.0f);
+		XMVECTOR poistion	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f) - direction;
+		RedSun.SetStrength(strength);
+		RedSun.SetDirection(direction);
+		RedSun.SetPosition(poistion);
+		RedSun.SetWidth(1000.0f);
+		RedSun.SetHeight(1000.0f);
+		RedSun.SetNearZ(0.1f);
+		RedSun.SetFarZ(1000.0f);
+		RedSun.UpdateBuffer();
+	}
+
+	{
+		Light& blueMoon = m_workloadLights.at("BlueMoon");
+
+		float radius	= 100.0f;
+		float height	= 100.0f;
+		float speed		= 0.2f;
+
+		float orbitAngle = timeSecond * speed;
+
+		XMFLOAT3 strength	= { 0.1f, 0.5f, 1.0f };
+		XMVECTOR direction	= XMVectorSet(-XMScalarCos(orbitAngle) * radius, -height, -XMScalarSin(orbitAngle) * radius, 0.0f);
+		XMVECTOR poistion	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f) - direction;
+		blueMoon.SetStrength(strength);
+		blueMoon.SetDirection(direction);
+		blueMoon.SetPosition(poistion);
+		blueMoon.SetWidth(1000.0f);
+		blueMoon.SetHeight(1000.0f);
+		blueMoon.SetNearZ(0.1f);
+		blueMoon.SetFarZ(1000.0f);
+		blueMoon.UpdateBuffer();
 	}
 
 	{
@@ -165,20 +193,20 @@ void Podo::UpdateWorld()
 
 		float orbitAngle = timeSecond * speed;
 
-		XMVECTOR cameraPosition	= XMVectorSet
-		(
-			XMScalarCos(orbitAngle) * radius,
-			height,
-			XMScalarSin(orbitAngle) * radius,
-			1.0f
-		);
-		XMVECTOR cameraTarget	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		XMVECTOR cameraUp		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
+		XMFLOAT3 ambientLightStrength	= { 0.1f, 0.1f, 0.1f };
+		XMVECTOR cameraPosition			= XMVectorSet(XMScalarCos(orbitAngle) * radius, height, XMScalarSin(orbitAngle) * radius, 1.0f);
+		XMVECTOR cameraTarget			= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		XMVECTOR cameraUp				= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		mainCamera.SetDirectionalLightsNum(static_cast<unsigned int>(m_workloadLights.size()));
+		mainCamera.SetAmbientLightStrength(ambientLightStrength);
 		mainCamera.SetPosition(cameraPosition);
 		mainCamera.SetTarget(cameraTarget);
 		mainCamera.SetUpDirection(cameraUp);
-		mainCamera.UpdateBuffer(m_screenBackBufferAspectRatio);
+		mainCamera.SetHorizontalFOV(cameraHorizontalFOV);
+		mainCamera.SetAspectRatio(m_screenBackBufferAspectRatio);
+		mainCamera.SetNearZ(cameraNearZ);
+		mainCamera.SetFarZ(cameraFarZ);
+		mainCamera.UpdateBuffer();
 	}
 }
 
@@ -242,19 +270,21 @@ void Podo::UpdateRender()
 			m_commandList->SetGraphicsRootSignature(m_renderConfigureRootSignature.Get());
 			m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+			const Camera& camera = m_workloadCameras["MainCamera"];
 			m_commandList->SetGraphicsRootConstantBufferView
 			(
 				CAMERA_CONSTANT,
-				m_workloadCameras["MainCamera"].GetBufferGPUAddress()
+				camera.GetBufferGPUAddress()
 			);
-
-			m_commandList->SetGraphicsRootConstantBufferView
+ 
+			const Light& pLight = m_workloadLights.begin()->second;
+			m_commandList->SetGraphicsRootDescriptorTable
 			(
 				LIGHT_CONSTANT,
-				m_workloadLights["MainLight"].GetBufferGPUAddress()
+				pLight.GetConstantBufferViewGPUHandle()
 			);
 
-			//NOTE: 일단 오브젝트를 중심으로 순회하는 반복문을 임시로 사용하기로 함
+			//NOTE: 일단 오브젝트를 중심으로 순회하는 반복문을 임시로 사용함
 			for (const auto& [name, object] : m_workloadObjects)
 			{
 				m_commandList->SetGraphicsRootDescriptorTable
@@ -365,18 +395,15 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	ImGui::SetNextWindowPos(imGuiCenterPos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowSize(ImVec2(700.0f, 400.0f) * m_optionGUI.GetMasterScale(), ImGuiCond_Always);
 
-	ImGui::Begin("Prepare", nullptr, m_imGuiBasicFlag);
+	ImGui::Begin("Prepare", nullptr, imGuiBasicFlag);
 
-	bool backButtonClicked = ImGui::Button("Start", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
+	bool backButtonClicked = ImGui::Button("Start", imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	if (backButtonClicked == true)
 	{
 		m_engineState = ENGINE_STATE_RUN;
 		WorldTimersReset();
 		WorldTimersStart();
 
-//NOTE:	USE_PIX 전처리 상수가 정의되어있지 않은 구성에선 PIXLoadLatestWinPixTimingCapturerLibrary()에서 nullptr이 반환되어 실패 해석이 복잡해짐
-//		또한 관리자 권한으로 실행하지 않으면 PIXBeginCapture(..)에서 실패가 반환되며 마찬가지로 실패 해석이 복잡해짐
-//		따라서 Profile 구성에서만 해당 함수들이 호출되도록 전처리 조건문을 작성하였음
 #if !defined(_DEBUG) && defined(USE_PIX)
 		ThrowIfNull(PIXLoadLatestWinPixTimingCapturerLibrary());
 
@@ -386,13 +413,14 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 		captureParameters.TimingCaptureParameters.CpuSamplesPerSecond	= 4000;
 		captureParameters.TimingCaptureParameters.CaptureGpuTiming		= true;
 
+		//NOTE: 관리자 권한으로 실행하지 않으면 Throw가 발생함
 		ThrowIfFailed(PIXBeginCapture(PIX_CAPTURE_TIMING, &captureParameters));
 #endif
 	}
 
 	ImGui::SameLine();
 
-	bool exitToWindowButtonClicked = ImGui::Button("Exit", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
+	bool exitToWindowButtonClicked = ImGui::Button("Exit", imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	if (exitToWindowButtonClicked == true)
 	{
 		DestroyWindow(m_hWnd);
@@ -403,7 +431,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	bool	previousHDRState		= m_optionHDR.IsActive();
 	int		previousGUIState		= m_optionGUI.masterSize;
 
-	ImGui::Dummy(m_imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
+	ImGui::Dummy(imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
 
 	{
 		ImGui::Text("Display");
@@ -419,7 +447,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 		ImGui::EndDisabled();
 	}
 
-	ImGui::Dummy(m_imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
+	ImGui::Dummy(imGuiSpacingBasicSize * m_optionGUI.GetMasterScale());
 	ImGui::Separator();
 
 	{
@@ -455,14 +483,14 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 
 void Podo::UpdateRunStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPos)
 {
-	ImGuiWindowFlags loadingGuiFlag = m_imGuiBasicFlag | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground;
+	ImGuiWindowFlags loadingGuiFlag = imGuiBasicFlag | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground;
 
 	ImGui::SetNextWindowPos(ImVec2(0.0f,0.0f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(400.0f, 200.0f) * m_optionGUI.GetMasterScale(), ImGuiCond_Always);
 
 	ImGui::Begin("Runtime", nullptr, loadingGuiFlag);
 
-	bool menuButtonClicked	= ImGui::Button("End", m_imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
+	bool menuButtonClicked	= ImGui::Button("End", imGuiSmallButtonBasicSize * m_optionGUI.GetMasterScale());
 	bool escKeyPressed		= ImGui::IsKeyPressed(ImGuiKey_Escape, false);
 	if (menuButtonClicked == true || escKeyPressed == true)
 	{

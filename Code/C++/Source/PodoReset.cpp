@@ -28,6 +28,7 @@
 #include <d3dx12_default.h>
 #include <d3dx12_core.h>
 #include <d3d12.h>
+#include <d3d12sdklayers.h>
 #include <d3dcommon.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
@@ -52,6 +53,7 @@
 #include <cstdint>
 #include <stdexcept>
 
+using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 using std::wstring;
 
@@ -93,12 +95,9 @@ void Podo::Reset()
 		ResetCommandAllocator();
 		ResetCommandList();
 
-		ResetDescriptorHeapRTV();
-		ResetDescriptorHeapDSV();
-		ResetDescriptorHeapCBVSRVUAV();
-
 		m_needResetSwapChain		= true;
 		m_needResetWorkload			= true;
+		m_needResetDescriptor		= true;
 		m_needResetRenderConfigure	= true;
 	}
 	
@@ -112,9 +111,6 @@ void Podo::Reset()
 		ResetViewPort();
 		ResetScissorRectangle();
 		ResetDepthStencilBuffer();
-
-		ResetRTV();
-		ResetDSV();
 
 		//TODO: RTV 포맷이 안 바뀌었으면 요청 생략하도록 곤치기
 		m_needResetRenderConfigure	= true;
@@ -131,6 +127,18 @@ void Podo::Reset()
 		ResetLights();
 		ResetCameras();
 
+		m_needResetDescriptor = true;
+	}
+
+	if (NeedResetDescriptor() == true)
+	{
+		m_needResetDevice = false;
+
+		ResetDescriptorHeapRTV();
+		ResetDescriptorHeapDSV();
+		ResetDescriptorHeapCBVSRVUAV();
+		ResetRTV();
+		ResetDSV();
 		ResetCBVSRVUAV();
 	}
 
@@ -208,7 +216,7 @@ void Podo::ResetWindowMode()
 
 void Podo::ResetFactory()
 {
-	UINT factoryFlags = 0;
+	unsigned int factoryFlags = 0;
 
 #ifdef _DEBUG
 	factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
@@ -327,19 +335,19 @@ void Podo::ResetDevice()
 	{
 		D3D12_FEATURE_DATA_FORMAT_SUPPORT backBufferFormatSDRQuery =
 		{
-			m_screenBackBufferFormatSDR,
+			screenBackBufferFormatSDR,
 			D3D12_FORMAT_SUPPORT1_NONE,
 			D3D12_FORMAT_SUPPORT2_NONE
 		};
 		D3D12_FEATURE_DATA_FORMAT_SUPPORT backBufferFormatHDRQuery =
 		{
-			m_screenBackBufferFormatHDR,
+			screenBackBufferFormatHDR,
 			D3D12_FORMAT_SUPPORT1_NONE,
 			D3D12_FORMAT_SUPPORT2_NONE
 		};
 		D3D12_FEATURE_DATA_FORMAT_SUPPORT depthStencilFormatQuery =
 		{
-			m_screenDepthStencilBufferFormat,
+			screenDepthStencilBufferFormat,
 			D3D12_FORMAT_SUPPORT1_NONE,
 			D3D12_FORMAT_SUPPORT2_NONE
 		};
@@ -438,80 +446,9 @@ void Podo::ResetCommandList()
 	m_commandList->Close();
 }
 
-
-void Podo::ResetDescriptorHeapRTV()
-{
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-	descriptorHeapDesc.NumDescriptors	= m_screenBackBufferCount;
-	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	descriptorHeapDesc.NodeMask			= 0;
-
-	ThrowIfFailed
-	(
-		m_device->CreateDescriptorHeap
-		(
-			&descriptorHeapDesc,
-			IID_PPV_ARGS(m_descriptorHeapRTV.ReleaseAndGetAddressOf())
-		)
-	);
-
-	m_descriptorHeapRTVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	m_descriptorHeapRTVStartHandleCPU = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
-}
-
-void Podo::ResetDescriptorHeapDSV()
-{
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-	descriptorHeapDesc.NumDescriptors	= 1;
-	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	descriptorHeapDesc.NodeMask			= 0;
-
-	ThrowIfFailed
-	(
-		m_device->CreateDescriptorHeap
-		(
-			&descriptorHeapDesc,
-			IID_PPV_ARGS(m_descriptorHeapDSV.ReleaseAndGetAddressOf())
-		)
-	);
-
-	m_descriptorHeapDSVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	m_descriptorHeapDSVStartHandleCPU = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapDSV->GetCPUDescriptorHandleForHeapStart());
-}
-
-void Podo::ResetDescriptorHeapCBVSRVUAV()
-{
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-	descriptorHeapDesc.NumDescriptors	= m_descriptorHeapCBVSRVUAVCapacityForGUI + m_descriptorHeapCBVSRVUAVCapacityForRender;
-	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	descriptorHeapDesc.NodeMask			= 0;
-
-	ThrowIfFailed
-	(
-		m_device->CreateDescriptorHeap
-		(
-			&descriptorHeapDesc,
-			IID_PPV_ARGS(m_descriptorHeapCBVSRVUAV.ReleaseAndGetAddressOf())
-		)
-	);
-
-	//NOTE: ImGui가 SRV를 둘 곳을 고정적으로 남겨두고, 그 뒷부분부터 사용하기로 함
-	m_descriptorHeapCBVSRVUAVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart());
-	m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
-
-	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene = m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI;
-	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
-	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene = m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI;
-	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene.Offset(m_descriptorHeapCBVSRVUAVCapacityForGUI, m_descriptorHeapCBVSRVUAVIncrementSize);
-}
-
 void Podo::ResetHDRSwapChainSupport()
 {
-	for (UINT i = 0; i < m_screenBackBufferCount; i++)
+	for (unsigned int i = 0; i < screenBackBufferCount; i++)
 	{
 		m_screenBackBuffers[i].Reset();
 	}
@@ -526,12 +463,12 @@ void Podo::ResetHDRSwapChainSupport()
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.Width					= std::max((int)widthClient, 10);
 	swapChainDesc.Height				= std::max((int)heightClient, 10);
-	swapChainDesc.Format				= m_screenBackBufferFormatHDR;
+	swapChainDesc.Format				= screenBackBufferFormatHDR;
 	swapChainDesc.Stereo				= false;
 	swapChainDesc.SampleDesc.Count		= 1;
 	swapChainDesc.SampleDesc.Quality	= 0;
 	swapChainDesc.BufferUsage			= DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount			= m_screenBackBufferCount;
+	swapChainDesc.BufferCount			= screenBackBufferCount;
 	swapChainDesc.Scaling				= DXGI_SCALING_STRETCH;
 	swapChainDesc.SwapEffect			= DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.AlphaMode				= DXGI_ALPHA_MODE_UNSPECIFIED;
@@ -557,8 +494,8 @@ void Podo::ResetHDRSwapChainSupport()
 
 	ThrowIfFailed((tempSwapChain.As(&tempSwapChain3)));
 
-	UINT colorSpaceHDRQuery = 0;
-	HRESULT queryResult = tempSwapChain3->CheckColorSpaceSupport(m_screenBackBufferColorSpaceHDR, &colorSpaceHDRQuery);
+	unsigned int colorSpaceHDRQuery = 0;
+	HRESULT queryResult = tempSwapChain3->CheckColorSpaceSupport(screenBackBufferColorSpaceHDR, &colorSpaceHDRQuery);
 	if (SUCCEEDED(queryResult) == true)
 	{
 		m_optionHDR.SetColorSpaceSupported((colorSpaceHDRQuery & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) != 0);
@@ -571,7 +508,7 @@ void Podo::ResetHDRSwapChainSupport()
 
 void Podo::ResetSwapChain()
 {
-	for (UINT i = 0; i < m_screenBackBufferCount; i++)
+	for (unsigned int i = 0; i < screenBackBufferCount; i++)
 	{
 		m_screenBackBuffers[i].Reset();
 	}
@@ -586,12 +523,12 @@ void Podo::ResetSwapChain()
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.Width					= std::max((int)widthClient, 10);
 	swapChainDesc.Height				= std::max((int)heightClient, 10);;
-	swapChainDesc.Format				= m_optionHDR.IsActive() ? m_screenBackBufferFormatHDR : m_screenBackBufferFormatSDR;
+	swapChainDesc.Format				= m_optionHDR.IsActive() ? screenBackBufferFormatHDR : screenBackBufferFormatSDR;
 	swapChainDesc.Stereo				= false;
 	swapChainDesc.SampleDesc.Count		= 1;
 	swapChainDesc.SampleDesc.Quality	= 0;
 	swapChainDesc.BufferUsage			= DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.BufferCount			= m_screenBackBufferCount;
+	swapChainDesc.BufferCount			= screenBackBufferCount;
 	swapChainDesc.Scaling				= DXGI_SCALING_STRETCH;
 	swapChainDesc.SwapEffect			= DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.AlphaMode				= DXGI_ALPHA_MODE_UNSPECIFIED;
@@ -626,11 +563,11 @@ void Podo::ResetSwapChain()
 
 	if (m_optionHDR.IsActive() == true)
 	{
-		m_screenSwapChain->SetColorSpace1(m_screenBackBufferColorSpaceHDR);
+		m_screenSwapChain->SetColorSpace1(screenBackBufferColorSpaceHDR);
 	}
 	else
 	{
-		m_screenSwapChain->SetColorSpace1(m_screenBackBufferColorSpaceSDR);
+		m_screenSwapChain->SetColorSpace1(screenBackBufferColorSpaceSDR);
 	}
 }
 
@@ -644,7 +581,7 @@ void Podo::ResetBackBufferInfo()
 
 	m_screenBackBufferIndex = m_screenSwapChain->GetCurrentBackBufferIndex();
 
-	for (UINT i = 0; i < m_screenBackBufferCount; i++)
+	for (unsigned int i = 0; i < screenBackBufferCount; i++)
 	{
 		ThrowIfFailed(m_screenSwapChain->GetBuffer(i, IID_PPV_ARGS(m_screenBackBuffers[i].ReleaseAndGetAddressOf())));
 	}
@@ -654,8 +591,8 @@ void Podo::ResetViewPort()
 {
 	m_screenViewPort.TopLeftX	= 0.0f;
 	m_screenViewPort.TopLeftY	= 0.0f;
-	m_screenViewPort.Width		= FLOAT(m_screenBackBufferWidth);
-	m_screenViewPort.Height		= FLOAT(m_screenBackBufferHeight);
+	m_screenViewPort.Width		= static_cast<float>(m_screenBackBufferWidth);
+	m_screenViewPort.Height		= static_cast<float>(m_screenBackBufferHeight);
 	m_screenViewPort.MinDepth	= 0.0f;
 	m_screenViewPort.MaxDepth	= 1.0f;
 }
@@ -677,14 +614,14 @@ void Podo::ResetDepthStencilBuffer()
 	depthStencilBufferDesc.Height				= m_screenBackBufferHeight;
 	depthStencilBufferDesc.DepthOrArraySize		= 1;
 	depthStencilBufferDesc.MipLevels			= 1;
-	depthStencilBufferDesc.Format				= m_screenDepthStencilBufferFormat;
+	depthStencilBufferDesc.Format				= screenDepthStencilBufferFormat;
 	depthStencilBufferDesc.SampleDesc.Count		= 1;
 	depthStencilBufferDesc.SampleDesc.Quality	= 0;
 	depthStencilBufferDesc.Layout				= D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	depthStencilBufferDesc.Flags				= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
 	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format				= m_screenDepthStencilBufferFormat;
+	clearValue.Format				= screenDepthStencilBufferFormat;
 	clearValue.DepthStencil.Depth	= 1.0f;
 	clearValue.DepthStencil.Stencil	= 0;
 
@@ -702,26 +639,6 @@ void Podo::ResetDepthStencilBuffer()
 			IID_PPV_ARGS(m_screenDepthStencilBuffer.ReleaseAndGetAddressOf())
 		)
 	);
-}
-
-void Podo::ResetRTV()
-{
-	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandleRTV = m_descriptorHeapRTVStartHandleCPU;
-	for (UINT i = 0; i < m_screenBackBufferCount; i++)
-	{
-		D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = {};
-		renderTargetViewDesc.Format					= m_optionHDR.IsActive() ? m_screenRTVFormatHDR : m_screenRTVFormatSDR;
-		renderTargetViewDesc.ViewDimension			= D3D12_RTV_DIMENSION_TEXTURE2D;
-		renderTargetViewDesc.Texture2D.MipSlice		= 0;
-		renderTargetViewDesc.Texture2D.PlaneSlice	= 0;
-
-		m_device->CreateRenderTargetView(m_screenBackBuffers[i].Get(), &renderTargetViewDesc, cpuHandleRTV.Offset(i, m_descriptorHeapRTVIncrementSize));
-	}
-}
-
-void Podo::ResetDSV()
-{
-	m_device->CreateDepthStencilView(m_screenDepthStencilBuffer.Get(), nullptr, m_descriptorHeapDSVStartHandleCPU);
 }
 
 void Podo::ResetMeshes()
@@ -779,7 +696,7 @@ void Podo::ResetMeshes()
 
 	//NOTE: 업로드 힙을 거쳐야 하기에 번거로운 디폴트 힙 자원 생성은 DirectXTK12의 ResourceUploadBatch 헬퍼를 이용하기로 함
 	//		다만 uploadFinished이 소멸될 때마다 불필요한 CPU 대기가 발생한다는 문제점이 있음
-	DirectX::ResourceUploadBatch resourceUpload(m_device.Get());
+	ResourceUploadBatch resourceUpload(m_device.Get());
 	resourceUpload.Begin();
 	{
 		{
@@ -799,7 +716,7 @@ void Podo::ResetTextures()
 {
 	m_workloadTextures.clear();
 
-	DirectX::ResourceUploadBatch resourceUpload(m_device.Get());
+	ResourceUploadBatch resourceUpload(m_device.Get());
 	resourceUpload.Begin();
 	{
 		{
@@ -829,11 +746,12 @@ void Podo::ResetMaterials()
 
 	{
 		Material steelMaterial;
-		steelMaterial.Create(m_device.Get(), &m_workloadTextures["Steel"]);
+		steelMaterial.Create(m_device.Get());
+		steelMaterial.SetTexturePtr(&m_workloadTextures["Steel"]);
 
-		DirectX::XMFLOAT3	diffuseAlbedo	= { 0.90f, 0.90f, 0.90f };
-		DirectX::XMFLOAT3	fresnelR0		= { 0.35f, 0.35f, 0.35f };
-		float				shininess		= 0.45f;
+		XMFLOAT3	diffuseAlbedo	= { 0.90f, 0.90f, 0.90f };
+		XMFLOAT3	fresnelR0		= { 0.35f, 0.35f, 0.35f };
+		float		shininess		= 0.45f;
 		steelMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		steelMaterial.SetFresnelR0(fresnelR0);
 		steelMaterial.SetShininess(shininess);
@@ -844,11 +762,12 @@ void Podo::ResetMaterials()
 
 	{
 		Material woodMaterial;
-		woodMaterial.Create(m_device.Get(), &m_workloadTextures["Wood"]);
+		woodMaterial.Create(m_device.Get());
+		woodMaterial.SetTexturePtr(&m_workloadTextures["Wood"]);
 
-		DirectX::XMFLOAT3	diffuseAlbedo	= { 0.78f, 0.72f, 0.42f };
-		DirectX::XMFLOAT3	fresnelR0		= { 0.05f, 0.05f, 0.05f };
-		float				shininess		= 0.12f;
+		XMFLOAT3	diffuseAlbedo	= { 0.78f, 0.72f, 0.42f };
+		XMFLOAT3	fresnelR0		= { 0.05f, 0.05f, 0.05f };
+		float		shininess		= 0.12f;
 		woodMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		woodMaterial.SetFresnelR0(fresnelR0);
 		woodMaterial.SetShininess(shininess);
@@ -863,35 +782,39 @@ void Podo::ResetObjects()
 	m_workloadObjects.clear();
 
 	{
-		Object boxObject;
-		boxObject.Create(m_device.Get(), &m_workloadMeshes.at("Box"), &m_workloadMaterials.at("Steel"));
+		Object steelBoxObject;
+		steelBoxObject.Create(m_device.Get());
+		steelBoxObject.SetMeshPtr(&m_workloadMeshes.at("Box"));
+		steelBoxObject.SetMaterialPtr(&m_workloadMaterials.at("Steel"));
 
-		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		DirectX::XMVECTOR position		= DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
-		boxObject.SetScale(scale);
-		boxObject.SetRotation(lookDirection, upDirection);
-		boxObject.SetPosition(position);
-		boxObject.UpdateBuffer();
+		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
+		XMVECTOR lookDirection	= XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
+		XMVECTOR upDirection	= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR position		= XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+		steelBoxObject.SetScale(scale);
+		steelBoxObject.SetRotation(lookDirection, upDirection);
+		steelBoxObject.SetPosition(position);
+		steelBoxObject.UpdateBuffer();
 
-		m_workloadObjects["HorizontalBoxObject"] = std::move(boxObject);
+		m_workloadObjects["HorizontalSteelBoxObject"] = std::move(steelBoxObject);
 	}
 
 	{
-		Object boxObject;
-		boxObject.Create(m_device.Get(), &m_workloadMeshes.at("Box"), &m_workloadMaterials.at("Wood"));
+		Object woodBoxObject;
+		woodBoxObject.Create(m_device.Get());
+		woodBoxObject.SetMeshPtr(&m_workloadMeshes.at("Box"));
+		woodBoxObject.SetMaterialPtr(&m_workloadMaterials.at("Wood"));
 
-		DirectX::XMFLOAT3 scale			= DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f);
-		DirectX::XMVECTOR lookDirection	= DirectX::XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		DirectX::XMVECTOR position		= DirectX::XMVectorSet(2.0f, 0.0f, 5.0f, 1.0f);
-		boxObject.SetScale(scale);
-		boxObject.SetRotation(lookDirection, upDirection);
-		boxObject.SetPosition(position);
-		boxObject.UpdateBuffer();
+		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
+		XMVECTOR lookDirection	= XMVectorSet(1.0f, 0.0f, 1.0f, 0.0f);
+		XMVECTOR upDirection	= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR position		= XMVectorSet(2.0f, 0.0f, 5.0f, 1.0f);
+		woodBoxObject.SetScale(scale);
+		woodBoxObject.SetRotation(lookDirection, upDirection);
+		woodBoxObject.SetPosition(position);
+		woodBoxObject.UpdateBuffer();
 
-		m_workloadObjects["VerticalBoxObject"] = std::move(boxObject);
+		m_workloadObjects["VerticalWoodBoxObject"] = std::move(woodBoxObject);
 	}
 }
 
@@ -900,18 +823,41 @@ void Podo::ResetLights()
 	m_workloadLights.clear();
 
 	{
-		Light mainLight;
-		mainLight.Create(m_device.Get());
+		Light redSun;
+		redSun.Create(m_device.Get());
 
-		DirectionalLight sun		= {};
-		sun.strength				= { 1.0f,  0.9f, 0.9f };
-		sun.direction				= { 1.0f, -0.3f, 0.0f };
-		DirectX::XMFLOAT3 ambient	= { 0.1f,  0.1f, 0.1f };
-		mainLight.SetDirectionalLight("Sun", sun);
-		mainLight.SetAmbientLight(ambient);
-		mainLight.UpdateBuffer();
+		XMFLOAT3 strength	= { 1.0f, 0.5f, 0.1f };
+		XMVECTOR direction	= XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+		XMVECTOR poistion	= XMVectorSet(0.0f, 100.0f, 0.0f, 1.0f);
+		redSun.SetStrength(strength);
+		redSun.SetDirection(direction);
+		redSun.SetPosition(poistion);
+		redSun.SetWidth(1000.0f);
+		redSun.SetHeight(1000.0f);
+		redSun.SetNearZ(0.1f);
+		redSun.SetFarZ(1000.0f);
+		redSun.UpdateBuffer();
 
-		m_workloadLights["MainLight"] = std::move(mainLight);
+		m_workloadLights["RedSun"] = std::move(redSun);
+	}
+
+	{
+		Light blueMoon;
+		blueMoon.Create(m_device.Get());
+
+		XMFLOAT3 strength	= { 0.1f, 0.5f, 1.0f };
+		XMVECTOR direction	= XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+		XMVECTOR poistion	= XMVectorSet(0.0f, 100.0f, 0.0f, 1.0f);
+		blueMoon.SetStrength(strength);
+		blueMoon.SetDirection(direction);
+		blueMoon.SetPosition(poistion);
+		blueMoon.SetWidth(1000.0f);
+		blueMoon.SetHeight(1000.0f);
+		blueMoon.SetNearZ(0.1f);
+		blueMoon.SetFarZ(1000.0f);
+		blueMoon.UpdateBuffer();
+
+		m_workloadLights["BlueMoon"] = std::move(blueMoon);
 	}
 }
 
@@ -923,16 +869,119 @@ void Podo::ResetCameras()
 		Camera mainCamera;
 		mainCamera.Create(m_device.Get());
 
-		DirectX::XMVECTOR position		= DirectX::XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
-		DirectX::XMVECTOR target		= DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 1.0f);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 1.0f);
+		XMFLOAT3 ambientLightStrength	= { 0.05f, 0.05f, 0.05f };
+		XMVECTOR position				= XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
+		XMVECTOR target					= XMVectorSet(0.0f, 0.0f,  0.0f, 1.0f);
+		XMVECTOR upDirection			= XMVectorSet(0.0f, 1.0f,  0.0f, 1.0f);
+		mainCamera.SetDirectionalLightsNum(static_cast<unsigned int>(m_workloadLights.size()));
+		mainCamera.SetAmbientLightStrength(ambientLightStrength);
 		mainCamera.SetPosition(position);
 		mainCamera.SetTarget(target);
 		mainCamera.SetUpDirection(upDirection);
-		mainCamera.UpdateBuffer(m_screenBackBufferAspectRatio);
+		mainCamera.SetHorizontalFOV(cameraHorizontalFOV);
+		mainCamera.SetAspectRatio(m_screenBackBufferAspectRatio);
+		mainCamera.SetNearZ(cameraNearZ);
+		mainCamera.SetFarZ(cameraFarZ);
+		mainCamera.UpdateBuffer();
 
 		m_workloadCameras["MainCamera"] = std::move(mainCamera);
 	}
+}
+
+void Podo::ResetDescriptorHeapRTV()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+	descriptorHeapDesc.NumDescriptors	= screenBackBufferCount;
+	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	descriptorHeapDesc.NodeMask			= 0;
+
+	ThrowIfFailed
+	(
+		m_device->CreateDescriptorHeap
+		(
+			&descriptorHeapDesc,
+			IID_PPV_ARGS(m_descriptorHeapRTV.ReleaseAndGetAddressOf())
+		)
+	);
+
+	m_descriptorHeapRTVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_descriptorHeapRTVStartHandleCPU = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapRTV->GetCPUDescriptorHandleForHeapStart());
+}
+
+void Podo::ResetDescriptorHeapDSV()
+{
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+	descriptorHeapDesc.NumDescriptors	= 1;
+	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	descriptorHeapDesc.NodeMask			= 0;
+
+	ThrowIfFailed
+	(
+		m_device->CreateDescriptorHeap
+		(
+			&descriptorHeapDesc,
+			IID_PPV_ARGS(m_descriptorHeapDSV.ReleaseAndGetAddressOf())
+		)
+	);
+
+	m_descriptorHeapDSVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	m_descriptorHeapDSVStartHandleCPU = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapDSV->GetCPUDescriptorHandleForHeapStart());
+}
+
+void Podo::ResetDescriptorHeapCBVSRVUAV()
+{
+	size_t workloadDescriptorDemand =
+		m_workloadTextures.size() +
+		m_workloadMaterials.size() +
+		m_workloadObjects.size() +
+		m_workloadLights.size();
+	
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+	descriptorHeapDesc.NumDescriptors	= imGuiDescriptorCapacity + static_cast<unsigned int>(workloadDescriptorDemand);
+	descriptorHeapDesc.Type				= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	descriptorHeapDesc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	descriptorHeapDesc.NodeMask			= 0;
+
+	ThrowIfFailed
+	(
+		m_device->CreateDescriptorHeap
+		(
+			&descriptorHeapDesc,
+			IID_PPV_ARGS(m_descriptorHeapCBVSRVUAV.ReleaseAndGetAddressOf())
+		)
+	);
+
+	//NOTE: ImGui가 SRV를 둘 곳을 고정적으로 남겨두고, 그 뒷부분부터 사용하기로 함
+	m_descriptorHeapCBVSRVUAVIncrementSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetCPUDescriptorHandleForHeapStart());
+	m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeapCBVSRVUAV->GetGPUDescriptorHandleForHeapStart());
+
+	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene = m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI;
+	m_descriptorHeapCBVSRVUAVStartHandleCPUForScene.Offset(imGuiDescriptorCapacity, m_descriptorHeapCBVSRVUAVIncrementSize);
+	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene = m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI;
+	m_descriptorHeapCBVSRVUAVStartHandleGPUForScene.Offset(imGuiDescriptorCapacity, m_descriptorHeapCBVSRVUAVIncrementSize);
+}
+
+void Podo::ResetRTV()
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandleRTV = m_descriptorHeapRTVStartHandleCPU;
+	for (unsigned int i = 0; i < screenBackBufferCount; i++)
+	{
+		D3D12_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = {};
+		renderTargetViewDesc.Format					= m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR;
+		renderTargetViewDesc.ViewDimension			= D3D12_RTV_DIMENSION_TEXTURE2D;
+		renderTargetViewDesc.Texture2D.MipSlice		= 0;
+		renderTargetViewDesc.Texture2D.PlaneSlice	= 0;
+
+		m_device->CreateRenderTargetView(m_screenBackBuffers[i].Get(), &renderTargetViewDesc, cpuHandleRTV.Offset(i, m_descriptorHeapRTVIncrementSize));
+	}
+}
+
+void Podo::ResetDSV()
+{
+	m_device->CreateDepthStencilView(m_screenDepthStencilBuffer.Get(), nullptr, m_descriptorHeapDSVStartHandleCPU);
 }
 
 void Podo::ResetCBVSRVUAV()
@@ -986,42 +1035,95 @@ void Podo::ResetCBVSRVUAV()
 		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
 		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
 	}
+
+	for (auto& [name, light] : m_workloadLights)
+	{
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation	= light.GetBufferGPUAddress();
+		cbvDesc.SizeInBytes		= light.GetBufferWidth();
+
+		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
+
+		light.SetConstantBufferViewGPUHandle(gpuHandle);
+
+		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+	}
 }
 
 void Podo::ResetRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER rootParameter[ROOT_PARAMETER_COUNT] = {};
 
-	//NOTE: 임시로 SRV 서술자 테이블 매개변수를 텍스처 자원 바인딩에 사용함
-	UINT textureShaderResourceRegister	= 0;
-	UINT textureDescriptorsNum			= 1;
-	CD3DX12_DESCRIPTOR_RANGE textureTable[1] = {};
-	textureTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, textureDescriptorsNum, textureShaderResourceRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
+	//NOTE: 하나의 프레임에 여러 대상이 사용되는 것들은 임시로 서술자가 1개인 SRV 서술자 테이블이나 CBV 서술자 테이블을 사용함
+	unsigned int textureShaderResouceRegister		= 0;
+	unsigned int textureShaderResourceRegisterSpace	= 0;
+	unsigned int textureDescriptorsNum				= 1;
+	CD3DX12_DESCRIPTOR_RANGE textureTable[1]		= {};
+	textureTable[0].Init
+	(
+		D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+		textureDescriptorsNum,
+		textureShaderResouceRegister,
+		textureShaderResourceRegisterSpace,
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	);
 	rootParameter[TEXTURE_CONSTANT].InitAsDescriptorTable(1, textureTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	//NOTE: 임시로 CBV 서술자 테이블 매개변수를 머테리얼과 오브젝트 자원 바인딩에 사용함
-	UINT materialConstantBufferRegister	= 0;
-	UINT materialDescriptorsNum			= 1;
-	CD3DX12_DESCRIPTOR_RANGE materialConstantTable[1] = {};
-	materialConstantTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, materialDescriptorsNum, materialConstantBufferRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	rootParameter[MATERIAL_CONSTANT].InitAsDescriptorTable(1, materialConstantTable, D3D12_SHADER_VISIBILITY_PIXEL);
+	unsigned int materialConstantBufferRegister			= 0;
+	unsigned int materialConstantBufferRegisterSpace	= 0;
+	unsigned int materialDescriptorsNum					= 1;
+	CD3DX12_DESCRIPTOR_RANGE materialTable[1]			= {};
+	materialTable[0].Init
+	(
+		D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+		materialDescriptorsNum,
+		materialConstantBufferRegister,
+		materialConstantBufferRegisterSpace,
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	);
+	rootParameter[MATERIAL_CONSTANT].InitAsDescriptorTable(1, materialTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	UINT objectConstantBufferRegister	= materialConstantBufferRegister + materialDescriptorsNum;
-	UINT objectDescriptorsNum			= 1;
-	CD3DX12_DESCRIPTOR_RANGE objectConstantTable[1] = {};
-	objectConstantTable[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, objectDescriptorsNum, objectConstantBufferRegister, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	rootParameter[OBJECT_CONSTANT].InitAsDescriptorTable(1, objectConstantTable, D3D12_SHADER_VISIBILITY_VERTEX);
+	unsigned int objectConstantBufferRegister		= materialConstantBufferRegister + materialDescriptorsNum;
+	unsigned int objectConstantBufferRegisterSpace	= 0;
+	unsigned int objectDescriptorsNum				= 1;
+	CD3DX12_DESCRIPTOR_RANGE objectTable[1]			= {};
+	objectTable[0].Init
+	(
+		D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+		objectDescriptorsNum,
+		objectConstantBufferRegister,
+		objectConstantBufferRegisterSpace,
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	);
+	rootParameter[OBJECT_CONSTANT].InitAsDescriptorTable(1, objectTable, D3D12_SHADER_VISIBILITY_VERTEX);
 	
-	//NOTE: 라이트와 카메라는 하나의 프레임 렌더링에 하나의 자원 인스턴스만 쓰이므로, 임시로 루트 서술자를 사용함
-	UINT lightConstantBufferRegister	= objectConstantBufferRegister + objectDescriptorsNum;
-	UINT lightDescriptorsNum			= 1;
-	rootParameter[LIGHT_CONSTANT].InitAsConstantBufferView(lightConstantBufferRegister, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+	//NOTE:	라이트는 하나의 그리기 명령 안에서도 모든 대상이 필요하므로, 별도의 레지스터 스페이스에 모든 대상을 묶을 수 있도록 함
+	unsigned int lightConstantBufferRegister		= 0;
+	unsigned int lightConstantBufferRegisterSpace	= 1;
+	unsigned int lightDescriptorsNum				= static_cast<unsigned int>(m_workloadLights.size());
+	CD3DX12_DESCRIPTOR_RANGE lightTable[1]			= {};
+	lightTable[0].Init
+	(
+		D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+		lightDescriptorsNum,
+		lightConstantBufferRegister,
+		lightConstantBufferRegisterSpace,
+		D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	);
+	rootParameter[LIGHT_CONSTANT].InitAsDescriptorTable(1, lightTable, D3D12_SHADER_VISIBILITY_PIXEL);
 
-	UINT cameraConstantBufferRegister	= lightConstantBufferRegister + lightDescriptorsNum;
-	UINT cameraDescriptorsNum			= 1;
-	rootParameter[CAMERA_CONSTANT].InitAsConstantBufferView(cameraConstantBufferRegister, 0, D3D12_SHADER_VISIBILITY_ALL);
+	//NOTE: 카메라는 하나의 프레임 렌더링에 하나의 대상만 쓰이므로, 임시로 루트 서술자를 사용함
+	unsigned int cameraConstantBufferRegister		= objectConstantBufferRegister + objectDescriptorsNum;
+	unsigned int cameraConstantBufferRegisterSpace	= 0;
+	unsigned int cameraDescriptorsNum				= 1;
+	rootParameter[CAMERA_CONSTANT].InitAsConstantBufferView
+	(
+		cameraConstantBufferRegister,
+		cameraConstantBufferRegisterSpace,
+		D3D12_SHADER_VISIBILITY_ALL
+	);
 
-	//NOTE: 샘플러 힙을 구성할 필요가 없는 루트 서명의 정적 샘플러를 편의 목적으로 이용하기로 함
 	std::vector<CD3DX12_STATIC_SAMPLER_DESC> samplerDescs = {};
 
 	const CD3DX12_STATIC_SAMPLER_DESC pointWrapSamplerDesc
@@ -1060,7 +1162,7 @@ void Podo::ResetRootSignature()
 	(
 		ROOT_PARAMETER_COUNT,
 		rootParameter,
-		static_cast<UINT>(samplerDescs.size()),
+		static_cast<unsigned int>(samplerDescs.size()),
 		samplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	);
@@ -1121,10 +1223,10 @@ void Podo::ResetPipelineStateObject()
 	pipelineStateObjectDesc.SampleMask							= UINT_MAX;
 	pipelineStateObjectDesc.PrimitiveTopologyType				= D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	pipelineStateObjectDesc.NumRenderTargets					= 1;
-	pipelineStateObjectDesc.RTVFormats[0]						= m_optionHDR.IsActive() ? m_screenRTVFormatHDR : m_screenRTVFormatSDR;
+	pipelineStateObjectDesc.RTVFormats[0]						= m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR;
 	pipelineStateObjectDesc.SampleDesc.Count					= 1;
 	pipelineStateObjectDesc.SampleDesc.Quality					= 0;
-	pipelineStateObjectDesc.DSVFormat							= m_screenDepthStencilBufferFormat;
+	pipelineStateObjectDesc.DSVFormat							= screenDepthStencilBufferFormat;
 	
 	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&pipelineStateObjectDesc, IID_PPV_ARGS(m_renderConfigurePipelineStateObject.ReleaseAndGetAddressOf())));
 }
@@ -1133,13 +1235,13 @@ void Podo::ResetImGui()
 {
 	CloseImGui();
 
-	m_renderConfigureImGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), m_descriptorHeapCBVSRVUAVCapacityForGUI);
+	m_renderConfigureImGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), imGuiDescriptorCapacity);
 
 	ImGui_ImplDX12_InitInfo initInfo = {};
 	initInfo.Device				= m_device.Get();
 	initInfo.CommandQueue		= m_commandQueue.Get();
 	initInfo.NumFramesInFlight	= 1;
-	initInfo.RTVFormat			= m_optionHDR.IsActive() ? m_screenRTVFormatHDR : m_screenRTVFormatSDR;
+	initInfo.RTVFormat			= m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR;
 	initInfo.UserData			= &m_renderConfigureImGuiDescriptorHeapAllocator;
 	initInfo.SrvDescriptorHeap = m_descriptorHeapCBVSRVUAV.Get();
 	initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* pInitInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle)

@@ -39,11 +39,9 @@ public:
 	Material(const Material& sourceMaterial) = delete;
 	Material& operator=(const Material& sourceMaterial) = delete;
 
-	void Create(ID3D12Device* pDevice, const Texture* pTexture)
+	void Create(ID3D12Device* pDevice)
 	{
-		m_pTexture = pTexture;
-
-		constexpr UINT			constantBufferSize	= (sizeof(MaterialBuffer) + 255) & ~255;
+		constexpr unsigned int	constantBufferSize	= (sizeof(MaterialBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -63,7 +61,12 @@ public:
 		UpdateBuffer();
 	}
 
-	//NOTE: XMFLOAT4 이하의 구조체들은 크기가 작으므로, 상수 참조 대신 간단한 값복사 방식을 사용하기로 함
+	//NOTE: 텍스처는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
+	void SetTexturePtr(const Texture* pTexture)
+	{
+		m_pTexture = pTexture;
+	}
+
 	void SetDiffuseAlbedo(DirectX::XMFLOAT3 diffuseAlbedo)
 	{
 		m_diffuseAlbedo = diffuseAlbedo;
@@ -81,7 +84,7 @@ public:
 
 	void UpdateBuffer()
 	{
-		MaterialBuffer materialConstantBufferData = {};
+		MaterialBuffer materialConstantBufferData	= {};
 		materialConstantBufferData.diffuseAlbedo	= m_diffuseAlbedo;
 		materialConstantBufferData.fresnelR0		= m_fresnelR0;
 		materialConstantBufferData.shininess		= m_shininess;
@@ -97,16 +100,16 @@ public:
 	const Texture* GetTexture() const
 	{
 		return m_pTexture;
-
 	}
+
 	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
 		return m_buffer->GetGPUVirtualAddress();
 	}
 
-	UINT GetBufferWidth() const
+	unsigned int GetBufferWidth() const
 	{
-		return static_cast<UINT>(m_buffer->GetDesc().Width);
+		return static_cast<unsigned int>(m_buffer->GetDesc().Width);
 	}
 
 	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)

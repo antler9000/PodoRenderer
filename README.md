@@ -3,7 +3,7 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 
 실시간 렌더링을 윈도우 데스크톱 환경에 담아내는 것을 목표로 합니다.
 
-현재 쉐도우 맵 기능과 HDR 옵션 기능을 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 개선하고 있습니다.
+현재 쉐도우 매핑 기능과 HDR 옵션 기능을 구현하고 있습니다. 또한 불필요한 인터페이스 초기화 케이스를 식별하여 개선하고 있습니다.
 
 <br>
 
@@ -47,7 +47,9 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 |GPU 피처 레벨  |D3D_FEATURE_LEVEL_12_0 이상          |
 |GPU 셰이더 모델|Shader Model 6.6 이상                |
 
-- 추후 바인드리스 서술자 힙 접근을 도입할 수 있도록 Shader Model 6.6을 최소 사양으로 정하였습니다. 운영체제는 지원 범위를 단순화하기 위해 Windows 10의 마지막 기능 업데이트인 22H2를 최소 지원 버전으로 정하였습니다.
+- 추후 바인드리스 서술자 힙 접근을 도입할 수 있도록 Shader Model 6.6을 최소 사양으로 정하였습니다.
+
+- 운영체제는 지원 범위를 단순화하기 위해 Windows 10의 마지막 기능 업데이트인 22H2를 최소 지원 버전으로 정하였습니다.
 
 <br>
 
@@ -97,7 +99,7 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 
 
 ### 3.2. 조명 기능
-현재 방향성 광원과 기본 텍스처 기능이 구현되어 있습니다.
+방향성 광원과 기본 텍스처 기능이 구현되어 있습니다.
 
 <br>
 
@@ -180,24 +182,24 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 [VSync Off]
 |구분 |측정 구간                                                                  |평균 소요 시간 |
 |-----|---------------------------------------------------------------------------|--------------:|
-|CPU  |1. 프레임 시간                                                             |334,423 ns     |
-|     |├─ 2. GPU 명령 완료 대기                                                   |63,812 ns      |
-|     |├─ 3. 논-렌더 로직                                                         |4,830 ns       |
-|     |└─ 4. 렌더 로직                                                            |265,523 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |8,952 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |8,722 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |3,637 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |10,423 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |1,487 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |56,933 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |174,691 ns     |
-|GPU  |1. 프레임 시간                                                             |25,320 ns      |
-|     |├─ 2. 그리기 준비                                                          |22,475 ns      |
-|     |├─ 3. 씬 그리기                                                            |2,743 ns       |
-|     |├─ 4. GUI 그리기                                                           |65 ns          |
-|     |└─ 5. 제시 준비                                                            |6 ns           |
+|CPU  |1. 프레임 시간                                                             |371,190 ns     |
+|     |├─ 2. GPU 명령 완료 대기                                                   |83,509 ns      |
+|     |├─ 3. 논-렌더 로직                                                         |5,409 ns       |
+|     |└─ 4. 렌더 로직                                                            |282,003 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |9,198 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |9,212 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |3,710 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |10,964 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |1,573 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |61,082 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |185,552 ns     |
+|GPU  |1. 프레임 시간                                                             |31,360 ns      |
+|     |├─ 2. 그리기 준비                                                          |27,760 ns      |
+|     |├─ 3. 씬 그리기                                                            |3,476 ns       |
+|     |├─ 4. GUI 그리기                                                           |83 ns          |
+|     |└─ 5. 제시 준비                                                            |7 ns           |
 
-- 총 캡처 시간: 12,257.91 ms
+- 총 캡처 시간: 7,441.47 ms
 
 - GPU 명령이 모두 소진될 때까지 CPU를 대기시키는 현 로직으로 인해, '2. GPU 명령 완료 대기' 과정에서 CPU 프레임 시간의 약 20%가 대기 상태로 낭비되고 있습니다.
 
@@ -208,24 +210,24 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 [VSync On]  
 |구분 |측정 구간                                                                  |평균 소요 시간 |
 |-----|---------------------------------------------------------------------------|--------------:|
-|CPU  |1. 프레임 시간                                                             |4,117,594 ns   |
-|     |├─ 2. GPU 명령 완료 대기                                                   |3,566,151 ns   |
-|     |├─ 3. 논-렌더 로직                                                         |23,160 ns      |
-|     |└─ 4. 렌더 로직                                                            |527,199 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |26,106 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |22,998 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |8,596 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |25,745 ns      |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |3,166 ns       |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |131,178 ns     |
-|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |308,496 ns     |
-|GPU  |1. 프레임 시간                                                             |272,845 ns     |
-|     |├─ 2. 그리기 준비                                                          |256,860 ns     |
-|     |├─ 3. 씬 그리기                                                            |15,422 ns      |
-|     |├─ 4. GUI 그리기                                                           |476 ns         |
-|     |└─ 5. 제시 준비                                                            |19 ns          |
+|CPU  |1. 프레임 시간                                                             |4,115,572 ns   |
+|     |├─ 2. GPU 명령 완료 대기                                                   |3,550,071 ns   |
+|     |├─ 3. 논-렌더 로직                                                         |12,512 ns      |
+|     |└─ 4. 렌더 로직                                                            |552,296 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 5. 커맨드 리스트 초기화 |23,468 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 6. 그리기 준비          |22,917 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 7. 씬 그리기            |8,506 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 8. GUI 그리기           |28,651 ns      |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 9. 제시 준비            |4,059 ns       |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 10. 커맨드 리스트 제출  |139,319 ns     |
+|     |&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 11. 제시                |324,322 ns     |
+|GPU  |1. 프레임 시간                                                             |77,977 ns      |
+|     |├─ 2. 그리기 준비                                                          |65,040 ns      |
+|     |├─ 3. 씬 그리기                                                            |12,500 ns      |
+|     |├─ 4. GUI 그리기                                                           |361 ns         |
+|     |└─ 5. 제시 준비                                                            |13 ns          |
 
-- 총 캡처 시간: 15,572.47 ms
+- 총 캡처 시간: 7,704.27 ms
 
 - VSync를 켰으므로 명령 큐에 제출된 Present 명령은 VSyncBlank 타이밍에 처리되고, 이 시점까지 `FlushCommandQueue()`가 CPU의 다음 프레임 렌더 시작을 블록하므로, CPU의 '2. GPU 명령 완료 대기' 시간이 늘어납니다.
 
@@ -330,7 +332,7 @@ Win32와 D3D12를 이용하여 구현 중인 렌더링 엔진입니다.
 
 ### 6.4 Dear ImGui
 - 목적
-  - 옵션 GUI 제공
+  - GUI 제공
 
 - 사용 방식
   - 리포지토리 내부에 직접 포함함(`PodoRenderer\External\imgui`)

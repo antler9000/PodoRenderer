@@ -19,8 +19,8 @@
 
 struct ObjectBuffer
 {
-	DirectX::XMFLOAT4X4 worldMatrix			= {};
-	DirectX::XMFLOAT4X4 worldInvTransMatrix = {};
+	DirectX::XMFLOAT4X4 world			= {};
+	DirectX::XMFLOAT4X4 invTransWorld	= {};
 };
 
 class Object
@@ -36,13 +36,9 @@ public:
 	Object(const Object& sourceObject) = delete;
 	Object& operator=(const Object& sourceObject) = delete;
 
-	//NOTE: 메쉬는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
-	void Create(ID3D12Device* pDevice, const Mesh* pMesh, Material* pMaterial)
+	void Create(ID3D12Device* pDevice)
 	{
-		m_pMesh		= pMesh;
-		m_pMaterial	= pMaterial;
-
-		constexpr UINT			constantBufferSize	= (sizeof(ObjectBuffer) + 255) & ~255;
+		constexpr unsigned int	constantBufferSize	= (sizeof(ObjectBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -62,7 +58,18 @@ public:
 		UpdateBuffer();
 	}
 
-	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 인자를 SIMD 연산하고서 바로 전달할 수 있도록 XMVECTOR 타입으로 두기로 함
+	//NOTE: 메쉬는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
+	void SetMeshPtr(const Mesh* pMesh)
+	{
+		m_pMesh = pMesh;
+	}
+
+	void SetMaterialPtr(Material* pMaterial)
+	{
+		m_pMaterial = pMaterial;
+	}
+
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
 	void SetPosition(DirectX::XMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
@@ -88,7 +95,6 @@ public:
 		DirectX::XMStoreFloat4(&m_rotation, rotationQuaternion);
 	}
 
-	//NOTE: XMFLOAT4 이하의 구조체들은 크기가 작으므로, 상수 참조 대신 간단한 값복사 방식을 사용하기로 함
 	void SetScale(DirectX::XMFLOAT3 scale)
 	{
 		m_scale = scale;
@@ -108,8 +114,8 @@ public:
 		DirectX::XMMATRIX worldInvMatrix = XMMatrixInverse(nullptr, worldMatrix);
 
 		ObjectBuffer objectConstantBufferData = {};
-		XMStoreFloat4x4(&objectConstantBufferData.worldMatrix, XMMatrixTranspose(worldMatrix));
-		XMStoreFloat4x4(&objectConstantBufferData.worldInvTransMatrix, worldInvMatrix);
+		XMStoreFloat4x4(&objectConstantBufferData.world, XMMatrixTranspose(worldMatrix));
+		XMStoreFloat4x4(&objectConstantBufferData.invTransWorld, worldInvMatrix);
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
@@ -134,9 +140,9 @@ public:
 		return m_buffer->GetGPUVirtualAddress();
 	}
 	
-	UINT GetBufferWidth() const
+	unsigned int GetBufferWidth() const
 	{
-		return static_cast<UINT>(m_buffer->GetDesc().Width);
+		return static_cast<unsigned int>(m_buffer->GetDesc().Width);
 	}
 
 	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)

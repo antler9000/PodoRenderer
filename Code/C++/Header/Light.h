@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 //Podo
-#include "Common.h"
 #include "Debug.h"
 
 //Win32
@@ -14,29 +13,17 @@
 #include <DirectXMath.h>
 
 //C++
-#include <unordered_map>
-#include <string>
 #include <cstring>
 #include <cstdint>
 
-//NOTE: C++의 XMFLOAT3는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
-struct DirectionalLight
-{
-	DirectX::XMFLOAT3	strength	= {};
-	std::uint32_t		padding0	= {};
-	DirectX::XMFLOAT3	direction	= { 0.0f, -1.0f, 0.0f };
-	std::uint32_t		padding1	= {};
-};
-
-//NOTE: C++의 DirectionalLight는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
-//		또한 어레이로 사용할 경우에 16바이트 경계로 맞춰질 수 있도록 끝에 패딩을 추가함
+//NOTE: C++의 XMFLOAT3과 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 struct LightBuffer
 {
-	std::uint32_t		directionalLightsNum						= {};
-	std::uint32_t		padding1[3]									= {};
-	DirectionalLight	directionalLights[MAX_DIRECTIONAL_LIGHTS]	= {};
-	DirectX::XMFLOAT3	ambientLight								= {};
-	std::uint32_t		padding2									= {};
+	DirectX::XMFLOAT3	strength		= {};
+	std::uint32_t		padding0		= {};
+	DirectX::XMFLOAT3	direction		= {};
+	std::uint32_t		padding1		= {};
+	DirectX::XMFLOAT4X4	orthoViewProj	= {};
 };
 
 class Light
@@ -54,7 +41,7 @@ public:
 
 	void Create(ID3D12Device* pDevice)
 	{
-		constexpr UINT			constantBufferSize	= (sizeof(LightBuffer) + 255) & ~255;
+		constexpr unsigned int	constantBufferSize	= (sizeof(LightBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
 
@@ -74,44 +61,57 @@ public:
 		UpdateBuffer();
 	}
 
-	//NOTE: 셰이더의 라이트 상수 버퍼에 담길 수 있는 최대 방향성 광원의 수를 초과하는 경우 false를 반환함
-	bool SetDirectionalLight(std::string lightName, DirectionalLight light)
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
+	void XM_CALLCONV SetStrength(DirectX::XMFLOAT3 strength)
 	{
-		if (m_directionalLights.find(lightName) == m_directionalLights.end())
-		{
-			if (m_directionalLights.size() >= MAX_DIRECTIONAL_LIGHTS)
-			{
-				return false;
-			}
-		}
+		m_strength = strength;
+	}
 
-		m_directionalLights[lightName] = light;
+	void XM_CALLCONV SetDirection(DirectX::FXMVECTOR direction)
+	{
+		DirectX::XMStoreFloat3(&m_direction, direction);
+	}
 
-		return true;
+	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
+	{
+		DirectX::XMStoreFloat3(&m_position, position);
+	}
+
+	void SetWidth(float width)
+	{
+		m_width = width;
+	}
+
+	void SetHeight(float height)
+	{
+		m_height = height;
+	}
+
+	void SetNearZ(float nearZ)
+	{
+		m_nearZ = nearZ;
+	}
+
+	void SetFarZ(float farZ)
+	{
+		m_farZ = farZ;
 	}
 	
-	void UnsetDirectionalLight(std::string lightName)
-	{
-		m_directionalLights.erase(lightName);
-	}
-
-	void SetAmbientLight(DirectX::XMFLOAT3 ambientLight)
-	{
-		m_ambientLight = ambientLight;
-	}
-
 	void UpdateBuffer()
 	{
-		LightBuffer lightConstantBufferData = {};
-		lightConstantBufferData.directionalLightsNum = static_cast<uint32_t>(m_directionalLights.size());
-		int i = 0;
-		for (const auto& [name, light] : m_directionalLights)
-		{
-			lightConstantBufferData.directionalLights[i] = light;
+		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
+		DirectX::XMVECTOR toDirection	= DirectX::XMLoadFloat3(&m_direction);
+		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-			i++;
-		}
-		lightConstantBufferData.ambientLight = m_ambientLight;
+		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookToLH(position, toDirection, upDirection);
+		DirectX::XMMATRIX orthoProjMatrix	= DirectX::XMMatrixOrthographicLH(m_width, m_height, m_nearZ, m_farZ);
+
+		DirectX::XMMATRIX orthoViewProjMatrix = viewMatrix * orthoProjMatrix;
+
+		LightBuffer lightConstantBufferData = {};
+		lightConstantBufferData.strength = m_strength;
+		lightConstantBufferData.direction = m_direction;
+		DirectX::XMStoreFloat4x4(&lightConstantBufferData.orthoViewProj, orthoViewProjMatrix);
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
@@ -126,10 +126,32 @@ public:
 		return m_buffer->GetGPUVirtualAddress();
 	}
 
+	unsigned int GetBufferWidth() const
+	{
+		return static_cast<unsigned int>(m_buffer->GetDesc().Width);
+	}
+
+	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+	{
+		m_objectConstantBufferViewGPUHandle = handle;
+	}
+
+	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
+	{
+		return m_objectConstantBufferViewGPUHandle;
+	}
+
 private:
 
-	std::unordered_map<std::string, DirectionalLight>	m_directionalLights	= {};
-	DirectX::XMFLOAT3									m_ambientLight		= {};
+	DirectX::XMFLOAT3	m_strength	= {};
+	DirectX::XMFLOAT3	m_direction	= { 0.0f, -1.0f, 0.0f };
+	DirectX::XMFLOAT3	m_position	= { 0.0f, 100.0f, 0.0f };
+	float				m_width		= 1000.0f;
+	float				m_height	= 1000.0f;
+	float				m_nearZ		= 0.1f;
+	float				m_farZ		= 1000.0f;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
+
+	D3D12_GPU_DESCRIPTOR_HANDLE m_objectConstantBufferViewGPUHandle = {};
 };
