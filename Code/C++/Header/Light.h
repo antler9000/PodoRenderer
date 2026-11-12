@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 //Podo
+#include "Shadow.h"
 #include "Debug.h"
 
 //Win32
@@ -13,16 +14,17 @@
 #include <DirectXMath.h>
 
 //C++
+#include <memory>
 #include <cstring>
 #include <cstdint>
 
-//NOTE: C++의 XMFLOAT3과 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
+//NOTE: C++의 XMFLOAT4X4는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 struct LightBuffer
 {
+	std::uint32_t		isShadowOn		= {};
 	DirectX::XMFLOAT3	strength		= {};
-	std::uint32_t		padding0		= {};
 	DirectX::XMFLOAT3	direction		= {};
-	std::uint32_t		padding1		= {};
+	std::uint32_t		padding			= {};
 	DirectX::XMFLOAT4X4	orthoViewProj	= {};
 };
 
@@ -39,8 +41,18 @@ public:
 	Light(const Light& sourceLight) = delete;
 	Light& operator=(const Light& sourceLight) = delete;
 
-	void Create(ID3D12Device* pDevice)
+	void Create(ID3D12Device* pDevice, bool isShadowOn = false, unsigned int shadowWidth = 1024, unsigned int shadowHeight = 1024)
 	{
+		m_upShadow.reset();
+
+		m_isShadowOn = isShadowOn;
+		if (isShadowOn == true)
+		{
+			m_upShadow = std::make_unique<Shadow>();
+
+			m_upShadow->Create(pDevice, shadowWidth, shadowHeight);
+		}
+
 		constexpr unsigned int	constantBufferSize	= (sizeof(LightBuffer) + 255) & ~255;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
@@ -61,15 +73,25 @@ public:
 		UpdateBuffer();
 	}
 
-	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
-	void XM_CALLCONV SetStrength(DirectX::XMFLOAT3 strength)
+	bool GetIsShadowOn() const
+	{
+		return m_isShadowOn;
+	}
+
+	Shadow* GetShadowPtr() const
+	{
+		return m_upShadow.get();
+	}
+
+	void SetStrength(DirectX::XMFLOAT3 strength)
 	{
 		m_strength = strength;
 	}
 
-	void XM_CALLCONV SetDirection(DirectX::FXMVECTOR direction)
+	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
+	void XM_CALLCONV SetDirection(DirectX::FXMVECTOR lookDirection)
 	{
-		DirectX::XMStoreFloat3(&m_direction, direction);
+		DirectX::XMStoreFloat3(&m_direction, lookDirection);
 	}
 
 	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
@@ -77,41 +99,30 @@ public:
 		DirectX::XMStoreFloat3(&m_position, position);
 	}
 
-	void SetWidth(float width)
+	void SetViewVolume(float width, float height, float nearZ, float farZ)
 	{
-		m_width = width;
+		m_width		= width;
+		m_height	= height;
+		m_nearZ		= nearZ;
+		m_farZ		= farZ;
 	}
 
-	void SetHeight(float height)
-	{
-		m_height = height;
-	}
-
-	void SetNearZ(float nearZ)
-	{
-		m_nearZ = nearZ;
-	}
-
-	void SetFarZ(float farZ)
-	{
-		m_farZ = farZ;
-	}
-	
 	void UpdateBuffer()
 	{
 		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
-		DirectX::XMVECTOR toDirection	= DirectX::XMLoadFloat3(&m_direction);
+		DirectX::XMVECTOR lookDirection	= DirectX::XMLoadFloat3(&m_direction);
 		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookToLH(position, toDirection, upDirection);
+		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookToLH(position, lookDirection, upDirection);
 		DirectX::XMMATRIX orthoProjMatrix	= DirectX::XMMatrixOrthographicLH(m_width, m_height, m_nearZ, m_farZ);
 
 		DirectX::XMMATRIX orthoViewProjMatrix = viewMatrix * orthoProjMatrix;
 
-		LightBuffer lightConstantBufferData = {};
-		lightConstantBufferData.strength = m_strength;
-		lightConstantBufferData.direction = m_direction;
-		DirectX::XMStoreFloat4x4(&lightConstantBufferData.orthoViewProj, orthoViewProjMatrix);
+		LightBuffer lightConstantBufferData	= {};
+		lightConstantBufferData.isShadowOn	= m_isShadowOn;
+		lightConstantBufferData.strength	= m_strength;
+		lightConstantBufferData.direction	= m_direction;
+		DirectX::XMStoreFloat4x4(&lightConstantBufferData.orthoViewProj, XMMatrixTranspose(orthoViewProjMatrix));
 
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
@@ -133,18 +144,21 @@ public:
 
 	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_objectConstantBufferViewGPUHandle = handle;
+		m_constantBufferViewGPUHandle = handle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
 	{
-		return m_objectConstantBufferViewGPUHandle;
+		return m_constantBufferViewGPUHandle;
 	}
 
 private:
 
+	bool					m_isShadowOn	= {};
+	std::unique_ptr<Shadow>	m_upShadow		= {};
+
 	DirectX::XMFLOAT3	m_strength	= {};
-	DirectX::XMFLOAT3	m_direction	= { 0.0f, -1.0f, 0.0f };
+	DirectX::XMFLOAT3	m_direction	= { 0.0f, -0.5f, -0.5f };
 	DirectX::XMFLOAT3	m_position	= { 0.0f, 100.0f, 0.0f };
 	float				m_width		= 1000.0f;
 	float				m_height	= 1000.0f;
@@ -153,5 +167,5 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
 
-	D3D12_GPU_DESCRIPTOR_HANDLE m_objectConstantBufferViewGPUHandle = {};
+	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferViewGPUHandle = {};
 };

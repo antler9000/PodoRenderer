@@ -102,6 +102,9 @@
     <ClInclude Include="Code\C++\Header\Texture.h">
       <Filter>Code\C++\Header</Filter>
     </ClInclude>
+    <ClInclude Include="Code\C++\Header\Shadow.h">
+      <Filter>Code\C++\Header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\imgui\imgui.cpp">
@@ -148,10 +151,16 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Code\HLSL\Source\PixelShader.hlsl">
+    <FxCompile Include="Code\HLSL\Source\MainPixelShader.hlsl">
       <Filter>Code\HLSL\Source</Filter>
     </FxCompile>
-    <FxCompile Include="Code\HLSL\Source\VertexShader.hlsl">
+    <FxCompile Include="Code\HLSL\Source\MainVertexShader.hlsl">
+      <Filter>Code\HLSL\Source</Filter>
+    </FxCompile>
+    <FxCompile Include="Code\HLSL\Source\ShadowPixelShader.hlsl">
+      <Filter>Code\HLSL\Source</Filter>
+    </FxCompile>
+    <FxCompile Include="Code\HLSL\Source\ShadowVertexShader.hlsl">
       <Filter>Code\HLSL\Source</Filter>
     </FxCompile>
   </ItemGroup>

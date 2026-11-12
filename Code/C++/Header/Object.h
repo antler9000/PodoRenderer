@@ -70,7 +70,7 @@ public:
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
-	void SetPosition(DirectX::XMVECTOR position)
+	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
 	}
@@ -117,8 +117,8 @@ public:
 		XMStoreFloat4x4(&objectConstantBufferData.world, XMMatrixTranspose(worldMatrix));
 		XMStoreFloat4x4(&objectConstantBufferData.invTransWorld, worldInvMatrix);
 
-		void* pMappedData = nullptr;
-		D3D12_RANGE readRange = { 0, 0 };
+		void* pMappedData		= nullptr;
+		D3D12_RANGE readRange	= { 0, 0 };
 
 		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));

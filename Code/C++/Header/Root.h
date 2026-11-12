@@ -1,11 +1,20 @@
-﻿//NOTE: 우선 가독성을 위해 대상들의 논리적인 후위 순회 순서를 임시로 따름
-enum RootParameter
+﻿//NOTE: 가독성을 위해 대상들의 논리적인 후위 순회 순서를 임시로 따름
+enum ShadowRootParameter
 {
-	TEXTURE_CONSTANT,
-	MATERIAL_CONSTANT,
-	OBJECT_CONSTANT,
-	LIGHT_CONSTANT,
-	CAMERA_CONSTANT,
+	SHADOW_OBJECT,
+	SHADOW_LIGHT,
 
-	ROOT_PARAMETER_COUNT
+	SHADOW_ROOT_PARAMETER_COUNT
+};
+
+enum MainRootParameter
+{
+	MAIN_TEXTURE,
+	MAIN_MATERIAL,
+	MAIN_OBJECT,
+	MAIN_SHADOW,
+	MAIN_LIGHT,
+	MAIN_CAMERA,
+
+	MAIN_ROOT_PARAMETER_COUNT
 };

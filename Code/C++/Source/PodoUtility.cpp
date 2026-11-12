@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <string>
 #include <fstream>
-#include <stdexcept>
 
 void Podo::FlushCommandQueue()
 {
@@ -28,7 +27,7 @@ void Podo::FlushCommandQueue()
 	auto waitResult = WaitForSingleObject(m_fenceEvent, INFINITE);
 	if (waitResult != WAIT_OBJECT_0)
 	{
-		throw std::runtime_error("wait fence failed");
+		Throw("wait fence failed");
 	}
 }
 

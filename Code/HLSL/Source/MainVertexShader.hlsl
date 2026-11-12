@@ -15,33 +15,35 @@ struct OutVertex
 
 struct Light
 {
+    bool        isShadowOn;
     float3      strength;
     float3      direction;
-    float4x4    orthoViewPorj;
+    float4x4    orthoViewProj;
 };
 
-SamplerState gSamplerPointWrap      : register(s0);
-SamplerState gSamplerLinearWrap     : register(s1);
-SamplerState gSamplerAnisotropic    : register(s2);
+SamplerState            gSamplerAnisotropic    : register(s0);
+SamplerComparisonState  gSamplerComparison     : register(s1);
 
-Texture2D gDiffuseMap : register(t0, space0);
+Texture2D gDiffuseMap : register(t0);
 
-cbuffer Material : register(b0, space0)
+cbuffer Material : register(b0)
 {
     float3  gDiffuseAlbedo;
     float3  gFresnelR0;
     float   gShininess;
 }
 
-cbuffer Object : register(b1, space0)
+cbuffer Object : register(b1)
 {
     float4x4 gWorld;
     float4x4 gInvTransWorld;
 }
 
+Texture2D<float> gShadowMap[] : register(t0, space1);
+
 ConstantBuffer<Light> gDirectionalLights[] : register(b0, space1);
 
-cbuffer Camera : register(b2, space0)
+cbuffer Camera : register(b2)
 {
     uint        gDirectionalLightsNum;
     float3      gAmbientLightStrength;

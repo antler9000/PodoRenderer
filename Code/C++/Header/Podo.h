@@ -123,8 +123,9 @@ private:
 	void ResetRTV();
 	void ResetDSV();
 	void ResetCBVSRVUAV();
-	void ResetRootSignature();
-	void ResetPipelineStateObject();
+	void ResetShadowRootSignature();
+	void ResetMainRootSignature();
+	void ResetPipelineStateObjects();
 	void ResetImGui();
 
 	void Close();
@@ -136,6 +137,9 @@ private:
 	void UpdateCaption();
 	void UpdateWorld();
 	void UpdateRender();
+	void UpdateScene();
+	void UpdateShadowScene();
+	void UpdateMainScene();
 	void UpdateGUI();
 	void UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPos);
 	void UpdateRunStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPos);
@@ -198,8 +202,8 @@ private:
 	unsigned int								m_screenBackBufferWidth								= {};
 	unsigned int								m_screenBackBufferHeight							= {};
 	float										m_screenBackBufferAspectRatio						= {};
-	D3D12_VIEWPORT								m_screenViewPort									= {};
-	D3D12_RECT									m_screenScissorRectangle							= {};
+	D3D12_VIEWPORT								m_screenViewport									= {};
+	D3D12_RECT									m_screenScissorRect									= {};
 	ComPtr<ID3D12Resource>						m_screenDepthStencilBuffer							= {};
 	
 	std::map<std::string, Mesh>					m_workloadMeshes									= {};
@@ -212,18 +216,26 @@ private:
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapRTV									= {};
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapDSV									= {};
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapCBVSRVUAV							= {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapRTVStartHandleCPU					= {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapDSVStartHandleCPU					= {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleCPUForGUI		= {};
-	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleGPUForGUI		= {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleCPUForScene		= {};
-	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartHandleGPUForScene		= {};
+	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapRTVStartCPUHandle					= {};
+	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapDSVStartCPUHandle					= {};
+	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartCPUHandleForGUI		= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForGUI		= {};
+	CD3DX12_CPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartCPUHandleForScene		= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForScene		= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForTextures	= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForMaterials	= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForObjects	= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForShadows	= {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForLights	= {};
+
 	unsigned int								m_descriptorHeapRTVIncrementSize					= {};
 	unsigned int								m_descriptorHeapDSVIncrementSize					= {};
 	unsigned int								m_descriptorHeapCBVSRVUAVIncrementSize				= {};
 
-	ComPtr<ID3D12RootSignature>					m_renderConfigureRootSignature						= {};
-	ComPtr<ID3D12PipelineState>					m_renderConfigurePipelineStateObject				= {};
+	ComPtr<ID3D12RootSignature>					m_renderConfigureShadowRootSignature				= {};
+	ComPtr<ID3D12RootSignature>					m_renderConfigureMainRootSignature					= {};
+	ComPtr<ID3D12PipelineState>					m_renderConfigureShadowPipelineStateObject			= {};
+	ComPtr<ID3D12PipelineState>					m_renderConfigureMainPipelineStateObject			= {};
 	bool										m_renderConfigureImGuiInitialized					= {};
 	ImGuiDescriptorHeapAllocator				m_renderConfigureImGuiDescriptorHeapAllocator		= {};
 

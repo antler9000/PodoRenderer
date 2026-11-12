@@ -54,7 +54,7 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_cameraConstantBuffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
 			)
 		);
 
@@ -72,17 +72,17 @@ public:
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
-	void SetPosition(DirectX::XMVECTOR position)
+	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
 	}
 
-	void SetTarget(DirectX::XMVECTOR target)
+	void XM_CALLCONV SetTarget(DirectX::FXMVECTOR target)
 	{
 		DirectX::XMStoreFloat3(&m_target, target);
 	}
 
-	void SetUpDirection(DirectX::XMVECTOR upDirection)
+	void XM_CALLCONV SetUpDirection(DirectX::FXMVECTOR upDirection)
 	{
 		DirectX::XMStoreFloat3(&m_upDirection, upDirection);
 	}
@@ -128,14 +128,14 @@ public:
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_cameraConstantBuffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
-		m_cameraConstantBuffer->Unmap(0, nullptr);
+		m_buffer->Unmap(0, nullptr);
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
 	{
-		return m_cameraConstantBuffer->GetGPUVirtualAddress();
+		return m_buffer->GetGPUVirtualAddress();
 	}
 
 private:
@@ -151,5 +151,5 @@ private:
 	float				m_nearZ			= 0.1f;
 	float				m_farZ			= 1000.0f;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_cameraConstantBuffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
 };

@@ -31,7 +31,7 @@ private:
 			"function : {}\n\n"
 			"line : {}\n\n"
 			"statement : {}\n\n"
-			"pResult : {}",
+			"result : {}",
 			location.file_name(),
 			location.function_name(),
 			location.line(),
@@ -50,9 +50,9 @@ private:
 		return result ? "true" : "false";
 	}
 
-	static std::string ResultString(void* pResult)
+	static std::string ResultString(void* result)
 	{
-		return std::format("{:p}", static_cast<const void*>(pResult));
+		return std::format("{:p}", static_cast<const void*>(result));
 	}
 };
 
@@ -81,4 +81,9 @@ private:
 	{\
 		throw PodoException(std::source_location::current(), #statement, pResult);\
 	}\
+}
+
+#define Throw(statement)\
+{\
+	throw PodoException(std::source_location::current(), #statement, S_OK);\
 }

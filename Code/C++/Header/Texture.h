@@ -24,7 +24,7 @@ public:
 	Texture(const Texture& sourceTexture) = delete;
 	Texture& operator=(const Texture& sourceTexture) = delete;
 
-	//NOTE: 구현에 사용하는 외부 헬퍼 함수가 wchar_t*를 요구하기에 wstring을 본 메서드의 매개변수로 둠
+	//NOTE: 헬퍼 함수가 wchar_t*를 요구하기에 wstring을 본 메서드의 매개변수로 둠
 	void Create(ID3D12Device* pDevice, DirectX::ResourceUploadBatch& resourceUpload, std::wstring fileName)
 	{
 		std::wstring filePath = L"../Texture/" + fileName;
