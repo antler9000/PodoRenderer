@@ -16,9 +16,27 @@ float CalculateShadowFactor(bool isShadowOn, int lightIndex, float3 posW)
     
     float3 shadowNDC = mul(float4(posW, 1.0f), gDirectionalLights[lightIndex].orthoViewProj).xyz;
     float2 shadowUV = float2(shadowNDC.x / 2 + 0.5f, -shadowNDC.y / 2 + 0.5f);
-    float shadowFactor = gShadowMap[lightIndex].SampleCmpLevelZero(gSamplerComparison, shadowUV, shadowNDC.z);
+       
+    int width   = 0;
+    int height  = 0;
+    gShadowMap[lightIndex].GetDimensions(width, height);
     
-    return shadowFactor;
+    float dx = 1.0f / width;
+    float dy = 1.0f / height;
+    
+    float2 leftTopUV        = float2(shadowUV.x - 0.5f * dx, shadowUV.y - 0.5f * dy);
+    float2 rightTopUV       = float2(shadowUV.x + 0.5f * dx, shadowUV.y - 0.5f * dy);
+    float2 leftBottomUV     = float2(shadowUV.x - 0.5f * dx, shadowUV.y + 0.5f * dy);
+    float2 rightBottomUV    = float2(shadowUV.x + 0.5f * dx, shadowUV.y + 0.5f * dy);
+    
+    float leftTopResult     = gShadowMap[lightIndex].SampleCmpLevelZero(gSamplerComparison, leftTopUV, shadowNDC.z);
+    float rightTopResult    = gShadowMap[lightIndex].SampleCmpLevelZero(gSamplerComparison, rightTopUV, shadowNDC.z);
+    float leftBottomResult  = gShadowMap[lightIndex].SampleCmpLevelZero(gSamplerComparison, leftBottomUV, shadowNDC.z);
+    float rightBottomResult = gShadowMap[lightIndex].SampleCmpLevelZero(gSamplerComparison, rightBottomUV, shadowNDC.z);
+    
+    float finalShadowFactor = (leftTopResult + rightTopResult + leftBottomResult + rightBottomResult) / 4.0f;
+    
+    return finalShadowFactor;
 }
 
 float3 CalculateReflectPercent(float microCosAngle)

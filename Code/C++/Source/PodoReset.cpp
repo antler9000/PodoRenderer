@@ -644,7 +644,7 @@ void Podo::ResetMeshes()
 {
 	m_workloadMeshes.clear();
 
-	std::vector<Vertex> boxVertices =
+	std::vector<Vertex> cubeVertices =
 	{
 		// -Z
 		{{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
@@ -683,7 +683,7 @@ void Podo::ResetMeshes()
 		{{+0.5f, -0.5f, +0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}}
 	};
 
-	std::vector<uint32_t> boxIndices =
+	std::vector<uint32_t> cubeIndices =
 	{
 		0,	1,	2,		0,	2,	3,	// -Z
 		4,	6,	5,		4,	7,  6,	// +Z
@@ -699,11 +699,11 @@ void Podo::ResetMeshes()
 	resourceUpload.Begin();
 	{
 		{
-			Mesh boxMesh;
-			boxMesh.Create(m_device.Get(), resourceUpload, std::move(boxVertices), std::move(boxIndices));
+			Mesh cubeMesh;
+			cubeMesh.Create(m_device.Get(), resourceUpload, std::move(cubeVertices), std::move(cubeIndices));
 
 			//NOTE: 실제 자원의 업로드 및 복사는 일어나지 않았지만, boxMesh의 초기화는 곧바로 일어나므로 바로 이렇게 move해도 됨
-			m_workloadMeshes["Cube"] = std::move(boxMesh);
+			m_workloadMeshes["Cube"] = std::move(cubeMesh);
 		}
 	}
 	auto uploadFinished = resourceUpload.End(m_commandQueue.Get());
@@ -1430,7 +1430,7 @@ void Podo::ResetPipelineStateObjects()
 	pipelineStateObjectDesc.VS										= CD3DX12_SHADER_BYTECODE(shadowVertexShader.Get());
 	pipelineStateObjectDesc.PS										= CD3DX12_SHADER_BYTECODE(shadowPixelShader.Get());
 	pipelineStateObjectDesc.RasterizerState							= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	pipelineStateObjectDesc.RasterizerState.DepthBias				= 1000;
+	pipelineStateObjectDesc.RasterizerState.DepthBias				= 3000;
 	pipelineStateObjectDesc.RasterizerState.SlopeScaledDepthBias	= 1.0f;
 	pipelineStateObjectDesc.RasterizerState.DepthBiasClamp			= 0.0f;
 	pipelineStateObjectDesc.BlendState								= CD3DX12_BLEND_DESC(D3D12_DEFAULT);
