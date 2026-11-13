@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 //Podo
-#include "Material.h"
-#include "Mesh.h"
+#include "Asset.h"
+#include "Vector.h"
 #include "Debug.h"
 
 //Win32
@@ -58,15 +58,9 @@ public:
 		UpdateBuffer();
 	}
 
-	//NOTE: 메쉬는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
-	void SetMeshPtr(const Mesh* pMesh)
+	void SetAssetPtr(Asset* pAsset)
 	{
-		m_pMesh = pMesh;
-	}
-
-	void SetMaterialPtr(Material* pMaterial)
-	{
-		m_pMaterial = pMaterial;
+		m_pAsset = pAsset;
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
@@ -75,9 +69,14 @@ public:
 		DirectX::XMStoreFloat3(&m_position, position);
 	}
 
-	//NOTE: lookDirection과 upDirection가 영벡터에 가깝지 않고, 서로 평행에 가깝지 않음을 호출부에서 책임져야 함
-	void XM_CALLCONV SetRotation(DirectX::FXMVECTOR lookDirection, DirectX::FXMVECTOR upDirection)
+	//NOTE: lookDirection이나 upDirection이 영벡터에 가깝거나, 서로 평행에 가까우면 회전을 설정하지 않고 false를 리턴함
+	bool XM_CALLCONV SetRotation(DirectX::FXMVECTOR lookDirection, DirectX::FXMVECTOR upDirection)
 	{
+		if (IsNearZero(lookDirection) == true || IsNearZero(upDirection) == true || IsNearParallel(lookDirection, upDirection) == true)
+		{
+			return false;
+		}
+
 		DirectX::XMVECTOR zAxis = DirectX::XMVector3Normalize(lookDirection);
 		DirectX::XMVECTOR xAxis = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(upDirection, zAxis));
 		DirectX::XMVECTOR yAxis = DirectX::XMVector3Cross(zAxis, xAxis);
@@ -93,6 +92,8 @@ public:
 		DirectX::XMVECTOR rotationQuaternion = DirectX::XMQuaternionRotationMatrix(rotationMatrix);
 
 		DirectX::XMStoreFloat4(&m_rotation, rotationQuaternion);
+
+		return true;
 	}
 
 	void SetScale(DirectX::XMFLOAT3 scale)
@@ -125,14 +126,9 @@ public:
 		m_buffer->Unmap(0, nullptr);
 	}
 
-	const Mesh* GetMesh() const
+	Asset* GetAsset() const
 	{
-		return m_pMesh;
-	}
-
-	Material* GetMaterial() const
-	{
-		return m_pMaterial;
+		return m_pAsset;
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
@@ -157,8 +153,7 @@ public:
 
 private:
 
-	const Mesh*	m_pMesh		= {};
-	Material*	m_pMaterial	= {};
+	Asset*	m_pAsset = {};
 
 	DirectX::XMFLOAT3 m_scale		= { 1.0f, 1.0f, 1.0f };
 	DirectX::XMFLOAT4 m_rotation	= { 0.0f, 0.0f, 0.0f, 1.0f };

@@ -29,11 +29,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Code\C++\Header\Alloc.h" />
+    <ClInclude Include="Code\C++\Header\Asset.h" />
     <ClInclude Include="Code\C++\Header\BaseApp.h" />
     <ClInclude Include="Code\C++\Header\Camera.h" />
     <ClInclude Include="Code\C++\Header\Debug.h" />
     <ClInclude Include="Code\C++\Header\Light.h" />
     <ClInclude Include="Code\C++\Header\Material.h" />
+    <ClInclude Include="Code\C++\Header\Vector.h" />
     <ClInclude Include="Code\C++\Header\Mesh.h" />
     <ClInclude Include="Code\C++\Header\Object.h" />
     <ClInclude Include="Code\C++\Header\Option.h" />

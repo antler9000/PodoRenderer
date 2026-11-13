@@ -7,6 +7,7 @@
 #include "Light.h"
 #include "Shadow.h"
 #include "Object.h"
+#include "Asset.h"
 #include "Material.h"
 #include "Texture.h"
 #include "Mesh.h"
@@ -123,6 +124,7 @@ void Podo::Reset()
 		ResetMeshes();
 		ResetTextures();
 		ResetMaterials();
+		ResetAssets();
 		ResetObjects();
 		ResetLights();
 		ResetCameras();
@@ -694,7 +696,6 @@ void Podo::ResetMeshes()
 	};
 
 	//NOTE: 업로드 힙을 거쳐야 하기에 번거로운 디폴트 힙 자원 생성은 DirectXTK12의 ResourceUploadBatch 헬퍼를 이용하기로 함
-	//		다만 uploadFinished이 소멸될 때마다 불필요한 CPU 대기가 발생한다는 문제점이 있음
 	ResourceUploadBatch resourceUpload(m_device.Get());
 	resourceUpload.Begin();
 	{
@@ -706,9 +707,9 @@ void Podo::ResetMeshes()
 			m_workloadMeshes["Cube"] = std::move(cubeMesh);
 		}
 	}
-	auto uploadFinished = resourceUpload.End(m_commandQueue.Get());
 
-	uploadFinished.wait();
+	//NOTE: resourceUpload.End(..)에서 반환되는 future 객체는 소멸될 때 업로드 작업이 완료될때까지 CPU 대기가 발생하므로 멤버 변수에 받아둠
+	m_meshResourceUpload = resourceUpload.End(m_commandQueue.Get());
 }
 
 void Podo::ResetTextures()
@@ -751,9 +752,8 @@ void Podo::ResetTextures()
 			m_workloadTextures["Paper"] = std::move(paperTexture);
 		}
 	}
-	auto uploadFinished = resourceUpload.End(m_commandQueue.Get());
 
-	uploadFinished.wait();
+	m_textureResourceUpload = resourceUpload.End(m_commandQueue.Get());
 }
 
 void Podo::ResetMaterials()
@@ -825,6 +825,41 @@ void Podo::ResetMaterials()
 	}
 }
 
+void Podo::ResetAssets()
+{
+	{
+		Asset steelCube;
+		steelCube.SetMeshPtr(&m_workloadMeshes.at("Cube"));
+		steelCube.SetMaterialPtr(&m_workloadMaterials.at("Steel"));
+
+		m_workloadAssets["SteelCube"] = std::move(steelCube);
+	}
+
+	{
+		Asset woodCube;
+		woodCube.SetMeshPtr(&m_workloadMeshes.at("Cube"));
+		woodCube.SetMaterialPtr(&m_workloadMaterials.at("Wood"));
+
+		m_workloadAssets["WoodCube"] = std::move(woodCube);
+	}
+
+	{
+		Asset plasticCube;
+		plasticCube.SetMeshPtr(&m_workloadMeshes.at("Cube"));
+		plasticCube.SetMaterialPtr(&m_workloadMaterials.at("Plastic"));
+
+		m_workloadAssets["PlasticCube"] = std::move(plasticCube);
+	}
+
+	{
+		Asset paperCube;
+		paperCube.SetMeshPtr(&m_workloadMeshes.at("Cube"));
+		paperCube.SetMaterialPtr(&m_workloadMaterials.at("Paper"));
+
+		m_workloadAssets["PaperCube"] = std::move(paperCube);
+	}
+}
+
 void Podo::ResetObjects()
 {
 	m_workloadObjects.clear();
@@ -832,8 +867,7 @@ void Podo::ResetObjects()
 	{
 		Object steelBoxObject;
 		steelBoxObject.Create(m_device.Get());
-		steelBoxObject.SetMeshPtr(&m_workloadMeshes.at("Cube"));
-		steelBoxObject.SetMaterialPtr(&m_workloadMaterials.at("Steel"));
+		steelBoxObject.SetAssetPtr(&m_workloadAssets.at("SteelCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
 		XMVECTOR lookDirection	= XMVectorSet(0.0f, 0.0f,  1.0f, 0.0f);
@@ -850,8 +884,7 @@ void Podo::ResetObjects()
 	{
 		Object woodBoxObject;
 		woodBoxObject.Create(m_device.Get());
-		woodBoxObject.SetMeshPtr(&m_workloadMeshes.at("Cube"));
-		woodBoxObject.SetMaterialPtr(&m_workloadMaterials.at("Wood"));
+		woodBoxObject.SetAssetPtr(&m_workloadAssets.at("WoodCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
 		XMVECTOR lookDirection	= XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -868,8 +901,7 @@ void Podo::ResetObjects()
 	{
 		Object plasticPillarObject;
 		plasticPillarObject.Create(m_device.Get());
-		plasticPillarObject.SetMeshPtr(&m_workloadMeshes.at("Cube"));
-		plasticPillarObject.SetMaterialPtr(&m_workloadMaterials.at("Plastic"));
+		plasticPillarObject.SetAssetPtr(&m_workloadAssets.at("PlasticCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 6.0f, 1.0f };
 		XMVECTOR lookDirection	= XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -886,8 +918,7 @@ void Podo::ResetObjects()
 	{
 		Object paperFloorObject;
 		paperFloorObject.Create(m_device.Get());
-		paperFloorObject.SetMeshPtr(&m_workloadMeshes.at("Cube"));
-		paperFloorObject.SetMaterialPtr(&m_workloadMaterials.at("Paper"));
+		paperFloorObject.SetAssetPtr(&m_workloadAssets.at("PaperCube"));
 
 		XMFLOAT3 scale			= { 10.0f, 0.1f, 10.0f };
 		XMVECTOR lookDirection	= XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -911,7 +942,7 @@ void Podo::ResetLights()
 		sun1.Create(m_device.Get(), true, 2048, 2048);
 
 		XMFLOAT3 strength	= { 0.6f, 0.5f, 0.5f };
-		XMVECTOR direction	= XMVectorSet(0.0f, -0.5f, -0.5f, 0.0f);
+		XMVECTOR direction	= XMVectorSet(0.0f,  -1.0f, 0.0f, 0.0f);
 		XMVECTOR poistion	= XMVectorSet(0.0f, 100.0f, 0.0f, 1.0f);
 		sun1.SetStrength(strength);
 		sun1.SetDirection(direction);
@@ -927,7 +958,7 @@ void Podo::ResetLights()
 		sun2.Create(m_device.Get(), true, 2048, 2048);
 
 		XMFLOAT3 strength	= { 0.6f, 0.5f, 0.5f };
-		XMVECTOR direction	= XMVectorSet(0.0f, -0.5f, -0.5f, 0.0f);
+		XMVECTOR direction	= XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
 		XMVECTOR poistion	= XMVectorSet(0.0f, 100.0f, 0.0f, 1.0f);
 		sun2.SetStrength(strength);
 		sun2.SetDirection(direction);
@@ -956,10 +987,7 @@ void Podo::ResetCameras()
 		mainCamera.SetPosition(position);
 		mainCamera.SetTarget(target);
 		mainCamera.SetUpDirection(upDirection);
-		mainCamera.SetHorizontalFOV(cameraHorizontalFOV);
-		mainCamera.SetAspectRatio(m_screenBackBufferAspectRatio);
-		mainCamera.SetNearZ(cameraNearZ);
-		mainCamera.SetFarZ(cameraFarZ);
+		mainCamera.SetViewVolume(cameraHorizontalFOV, m_screenBackBufferAspectRatio, cameraNearZ, cameraFarZ);
 		mainCamera.UpdateBuffer();
 
 		m_workloadCameras["MainCamera"] = std::move(mainCamera);
@@ -1011,11 +1039,13 @@ void Podo::ResetDescriptorHeapDSV()
 void Podo::ResetDescriptorHeapCBVSRVUAV()
 {
 	//NOTE: 각 라이트 객체는 스스로의 CBV와 하위 쉐도우 맵의 SRV를 하나씩 사용하므로 서술자 2개가 필요함
+	//		또한 라이트가 0개인 경우에도 쉐도우와 라이트 시작점 핸들이 힙 바깥을 가리키지 않도록 힙의 끝에 빈 공간 1개를 추가함
 	size_t workloadDescriptorDemand =
 		m_workloadTextures.size()	+
 		m_workloadMaterials.size()	+
 		m_workloadObjects.size()	+
-		2 * m_workloadLights.size();
+		2 * m_workloadLights.size() +
+		1;
 	
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.NumDescriptors	= imGuiDescriptorCapacity + static_cast<unsigned int>(workloadDescriptorDemand);
@@ -1305,7 +1335,7 @@ void Podo::ResetMainRootSignature()
 	//NOTE:	쉐도우와 라이트는 하나의 그리기 명령 안에서도 모든 대상이 필요하므로, 모든 대상을 묶을 수 있는 너비의 테이블을 이용함
 	unsigned int shadowShaderResourceRegister		= 0;
 	unsigned int shadowShaderResourceRegisterSpace	= 1;
-	unsigned int shadowDescriptorsNum				= static_cast<unsigned int>(m_workloadLights.size());
+	unsigned int shadowDescriptorsNum				= (static_cast<unsigned int>(m_workloadLights.size()) == 0) ? 1 : static_cast<unsigned int>(m_workloadLights.size());
 	CD3DX12_DESCRIPTOR_RANGE shadowTable[1] = {};
 	shadowTable[0].Init
 	(
@@ -1319,7 +1349,7 @@ void Podo::ResetMainRootSignature()
 
 	unsigned int lightConstantBufferRegister		= 0;
 	unsigned int lightConstantBufferRegisterSpace	= 1;
-	unsigned int lightDescriptorsNum				= static_cast<unsigned int>(m_workloadLights.size());
+	unsigned int lightDescriptorsNum				= (static_cast<unsigned int>(m_workloadLights.size()) == 0) ? 1 : static_cast<unsigned int>(m_workloadLights.size());
 	CD3DX12_DESCRIPTOR_RANGE lightTable[1]			= {};
 	lightTable[0].Init
 	(

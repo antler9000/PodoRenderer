@@ -9,6 +9,7 @@
 #include "Camera.h"
 #include "Light.h"
 #include "Object.h"
+#include "Asset.h"
 #include "Material.h"
 #include "Texture.h"
 #include "Mesh.h"
@@ -37,6 +38,7 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <future>
 
 class Podo : public BaseApp<Podo>
 {
@@ -114,6 +116,7 @@ private:
 	void ResetMeshes();
 	void ResetTextures();
 	void ResetMaterials();
+	void ResetAssets();
 	void ResetObjects();
 	void ResetLights();
 	void ResetCameras();
@@ -209,9 +212,13 @@ private:
 	std::map<std::string, Mesh>					m_workloadMeshes									= {};
 	std::map<std::string, Texture>				m_workloadTextures									= {};
 	std::map<std::string, Material>				m_workloadMaterials									= {};
+	std::map<std::string, Asset>				m_workloadAssets									= {};
 	std::map<std::string, Object>				m_workloadObjects									= {};
 	std::map<std::string, Light>				m_workloadLights									= {};
 	std::map<std::string, Camera>				m_workloadCameras									= {};
+	
+	std::future<void>							m_meshResourceUpload								= {};
+	std::future<void>							m_textureResourceUpload								= {};
 
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapRTV									= {};
 	ComPtr<ID3D12DescriptorHeap>				m_descriptorHeapDSV									= {};
@@ -257,7 +264,7 @@ private:
 
 	bool										IsUpdateStopped() const								{ return (IsWorldStopped() && IsRenderStopped()); }
 	bool										IsWorldStopped() const								{ return (m_engineState != ENGINE_STATE_RUN); }
-	bool										IsRenderStopped() const								{ return (m_isWindowResizing || m_isWindowMoving || m_isWindowMinimized); }
+	bool										IsRenderStopped() const								{ return (m_isWindowMinimized); }
 	bool										m_isWindowResizing									= {};
 	bool										m_isWindowMoving									= {};
 	bool										m_isWindowMinimized									= {};

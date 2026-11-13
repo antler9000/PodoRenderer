@@ -51,8 +51,8 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		//NOTE: 창 테두리를 직접 끌어서 위치나 크기를 변화시키기를 시작하는 경우
 		case WM_ENTERSIZEMOVE:
 		{
-			m_isWindowResizing = true;
-			m_isWindowMoving = true;
+			m_isWindowResizing	= true;
+			m_isWindowMoving	= true;
 
 			return 0;
 		}
@@ -60,8 +60,8 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		//NOTE: 창 테두리를 직접 끌어서 위치나 크기를 변화시키기를 멈추는 경우
 		case WM_EXITSIZEMOVE:
 		{
-			m_isWindowResizing = false;
-			m_isWindowMoving = false;
+			m_isWindowResizing	= false;
+			m_isWindowMoving	= false;
 
 			m_needResetFactory = true;
 
@@ -115,7 +115,7 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 
-			m_needResetFactory = true;
+			//m_needResetFactory = true;
 
 			if (m_optionFullScreen.IsActive() == false)
 			{

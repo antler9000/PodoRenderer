@@ -9,6 +9,7 @@
 #include "Light.h"
 #include "Shadow.h"
 #include "Object.h"
+#include "Asset.h"
 #include "Material.h"
 #include "Texture.h"
 #include "Mesh.h"
@@ -216,7 +217,7 @@ void Podo::UpdateRender()
 			m_commandList->ResourceBarrier(1, &barrierToRenderTarget);
 		}
 
-		if(m_engineState == ENGINE_STATE_RUN)
+		if (m_engineState == ENGINE_STATE_RUN)
 		{
 			PIXScopedEvent(PIX_COLOR_INDEX(7), L"CPU: 07. Draw Scene");
 			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(3), L"GPU: 3. Draw Scene");
@@ -341,7 +342,9 @@ void Podo::UpdateShadowScene()
 		{
 			m_commandList->SetGraphicsRootDescriptorTable(SHADOW_OBJECT, object.GetConstantBufferViewGPUHandle());
 
-			const Mesh* pMesh = object.GetMesh();
+			const Asset* pAsset = object.GetAsset();
+
+			const Mesh* pMesh = pAsset->GetMesh();
 			m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
 			m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 
@@ -392,13 +395,15 @@ void Podo::UpdateMainScene()
 	{
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_OBJECT, object.GetConstantBufferViewGPUHandle());
 
-		const Material* pMaterial = object.GetMaterial();
+		const Asset* pAsset = object.GetAsset();
+
+		const Material* pMaterial = pAsset->GetMaterial();
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_MATERIAL, pMaterial->GetConstantBufferViewGPUHandle());
 
 		const Texture* pTexture = pMaterial->GetTexture();
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_TEXTURE, pTexture->GetShaderResourceViewGPUHandle());
 
-		const Mesh* pMesh = object.GetMesh();
+		const Mesh* pMesh = pAsset->GetMesh();
 		m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
 		m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 

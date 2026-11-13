@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 //Podo
+#include "Vector.h"
 #include "Debug.h"
 
 //Win32
@@ -87,32 +88,42 @@ public:
 		DirectX::XMStoreFloat3(&m_upDirection, upDirection);
 	}
 
-	void SetHorizontalFOV(float horizontalFOV)
+	void SetViewVolume(float horizontalFOV, float aspectRatio, float nearZ, float farZ)
 	{
-		m_horizontalFOV = horizontalFOV;
+		m_horizontalFOV	= horizontalFOV;
+		m_aspectRatio	= aspectRatio;
+		m_nearZ			= nearZ;
+		m_farZ			= farZ;
 	}
 
-	void SetAspectRatio(float aspectRatio)
-	{
-		m_aspectRatio = aspectRatio;
-	}
-
-	void SetNearZ(float nearZ)
-	{
-		m_nearZ = nearZ;
-	}
-
-	void SetFarZ(float farZ)
-	{
-		m_farZ = farZ;
-	}
-
-	//NOTE: (m_target - m_position)와 m_upDirection가 영벡터에 가깝지 않고, 서로 평행에 가깝지 않음을 호출부에서 책임져야 함
+	//NOTE: (m_target - m_position)이나 m_upDirection이 영벡터에 가까운 경우, 그리고 두 벡터가 평행에 가까운 경우 임의로 방향을 설정함
 	void UpdateBuffer()
 	{
 		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
 		DirectX::XMVECTOR target		= DirectX::XMLoadFloat3(&m_target);
 		DirectX::XMVECTOR upDirection	= DirectX::XMLoadFloat3(&m_upDirection);
+
+		if (IsNearZero(DirectX::XMVectorSubtract(target, position)) == true)
+		{
+			target = DirectX::XMVectorAdd(position, DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f));
+		}
+
+		if (IsNearZero(upDirection) == true)
+		{
+			upDirection = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		}
+
+		if (IsNearParallel(DirectX::XMVectorSubtract(target, position), upDirection))
+		{
+			if (IsNearParallel(upDirection, DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)) == false)
+			{
+				upDirection = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			}
+			else
+			{
+				upDirection = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+			}
+		}
 
 		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookAtLH(position, target, upDirection);
 		DirectX::XMMATRIX projectionMatrix	= DirectX::XMMatrixPerspectiveFovLH(m_horizontalFOV, m_aspectRatio, m_nearZ, m_farZ);

@@ -35,7 +35,7 @@ void Podo::OptionSave()
 {
 	std::ofstream fout("SavedSettingsTemp.txt");
 
-	if (!fout)
+	if (fout.is_open() == false)
 	{
 		return;
 	}

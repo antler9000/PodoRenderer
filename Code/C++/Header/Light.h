@@ -2,6 +2,7 @@
 
 //Podo
 #include "Shadow.h"
+#include "Vector.h"
 #include "Debug.h"
 
 //Win32
@@ -73,16 +74,6 @@ public:
 		UpdateBuffer();
 	}
 
-	bool GetIsShadowOn() const
-	{
-		return m_isShadowOn;
-	}
-
-	Shadow* GetShadowPtr() const
-	{
-		return m_upShadow.get();
-	}
-
 	void SetStrength(DirectX::XMFLOAT3 strength)
 	{
 		m_strength = strength;
@@ -107,11 +98,22 @@ public:
 		m_farZ		= farZ;
 	}
 
+	//NOTE: m_direction이 영벡터에 가깝다면 임의로 아래를 바라보게 하고, m_direction이 Z축과 평행하다면 임의로 Y축을 upDirection으로 삼음
 	void UpdateBuffer()
 	{
 		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
 		DirectX::XMVECTOR lookDirection	= DirectX::XMLoadFloat3(&m_direction);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+		if (IsNearZero(lookDirection) == true)
+		{
+			lookDirection = DirectX::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+		}
+
+		if (IsNearParallel(lookDirection, upDirection) == true)
+		{
+			upDirection = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		}
 
 		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookToLH(position, lookDirection, upDirection);
 		DirectX::XMMATRIX orthoProjMatrix	= DirectX::XMMatrixOrthographicLH(m_width, m_height, m_nearZ, m_farZ);
@@ -130,6 +132,16 @@ public:
 		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &lightConstantBufferData, sizeof(lightConstantBufferData));
 		m_buffer->Unmap(0, nullptr);
+	}
+
+	bool GetIsShadowOn() const
+	{
+		return m_isShadowOn;
+	}
+
+	Shadow* GetShadowPtr() const
+	{
+		return m_upShadow.get();
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
@@ -158,10 +170,10 @@ private:
 	std::unique_ptr<Shadow>	m_upShadow		= {};
 
 	DirectX::XMFLOAT3	m_strength	= {};
-	DirectX::XMFLOAT3	m_direction	= { 0.0f, -0.5f, -0.5f };
-	DirectX::XMFLOAT3	m_position	= { 0.0f, 100.0f, 0.0f };
-	float				m_width		= 1000.0f;
-	float				m_height	= 1000.0f;
+	DirectX::XMFLOAT3	m_direction	= { 0.0f, -1.0f, 0.0f };
+	DirectX::XMFLOAT3	m_position	= { 0.0f, 10.0f, 0.0f };
+	float				m_width		= 100.0f;
+	float				m_height	= 100.0f;
 	float				m_nearZ		= 0.1f;
 	float				m_farZ		= 1000.0f;
 
