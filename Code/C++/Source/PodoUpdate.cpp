@@ -166,6 +166,7 @@ void Podo::UpdateWorld()
 	}
 
 	{
+		//NOTE: 스왑체인의 종횡비 변화를 전체 워크로드 초기화없이 카메라에 반영하기 위해, 매 프레임 카메라 업데이트를 수행해야 함
 		Camera& mainCamera = m_workloadCameras.at("MainCamera");
 
 		float radius	= 10.0f;
@@ -179,6 +180,7 @@ void Podo::UpdateWorld()
 		mainCamera.SetDirectionalLightsNum(static_cast<unsigned int>(m_workloadLights.size()));
 		mainCamera.SetPosition(cameraPosition);
 		mainCamera.SetTarget(cameraTarget);
+		mainCamera.SetViewVolume(XM_PIDIV4, m_screenBackBufferAspectRatio, 0.1f, 1000.0f);
 		mainCamera.UpdateBuffer();
 	}
 }
@@ -298,8 +300,8 @@ void Podo::UpdateScene()
 
 void Podo::UpdateShadowScene()
 {	
-	m_commandList->SetPipelineState(m_renderConfigureShadowPipelineStateObject.Get());
-	m_commandList->SetGraphicsRootSignature(m_renderConfigureShadowRootSignature.Get());
+	m_commandList->SetPipelineState(m_renderSceneConfigureShadowPipelineStateObject.Get());
+	m_commandList->SetGraphicsRootSignature(m_renderSceneConfigureShadowRootSignature.Get());
 
 	for (const auto& [name, light] : m_workloadLights)
 	{
@@ -312,7 +314,7 @@ void Podo::UpdateShadowScene()
 
 		CD3DX12_RESOURCE_BARRIER barrierToDepthWrite = CD3DX12_RESOURCE_BARRIER::Transition
 		(
-			pShadow->GetTexture(),
+			pShadow->GetResource(),
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE
 		);
@@ -342,7 +344,7 @@ void Podo::UpdateShadowScene()
 		{
 			m_commandList->SetGraphicsRootDescriptorTable(SHADOW_OBJECT, object.GetConstantBufferViewGPUHandle());
 
-			const Asset* pAsset = object.GetAsset();
+			const Asset* pAsset = object.GetAssetPtr();
 
 			const Mesh* pMesh = pAsset->GetMesh();
 			m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
@@ -352,7 +354,7 @@ void Podo::UpdateShadowScene()
 		}
 
 		CD3DX12_RESOURCE_BARRIER  barrierToPixelShader = CD3DX12_RESOURCE_BARRIER::Transition(
-			pShadow->GetTexture(),
+			pShadow->GetResource(),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		);
@@ -362,8 +364,8 @@ void Podo::UpdateShadowScene()
 
 void Podo::UpdateMainScene()
 {
-	m_commandList->SetPipelineState(m_renderConfigureMainPipelineStateObject.Get());
-	m_commandList->SetGraphicsRootSignature(m_renderConfigureMainRootSignature.Get());
+	m_commandList->SetPipelineState(m_renderSceneConfigureMainPipelineStateObject.Get());
+	m_commandList->SetGraphicsRootSignature(m_renderSceneConfigureMainRootSignature.Get());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandleRTV = m_descriptorHeapRTVStartCPUHandle;
 	cpuHandleRTV.Offset(m_screenBackBufferIndex, m_descriptorHeapRTVIncrementSize);
@@ -384,7 +386,7 @@ void Podo::UpdateMainScene()
 	);
 
 	const Camera& camera = m_workloadCameras.at("MainCamera");
-	m_commandList->SetGraphicsRootConstantBufferView(MAIN_CAMERA, camera.GetBufferGPUAddress());
+	m_commandList->SetGraphicsRootConstantBufferView(MAIN_CAMERA, camera.GetResourceGPUAddress());
 
 	m_commandList->SetGraphicsRootDescriptorTable(MAIN_LIGHT, m_descriptorHeapCBVSRVUAVStartGPUHandleForLights);
 
@@ -395,12 +397,12 @@ void Podo::UpdateMainScene()
 	{
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_OBJECT, object.GetConstantBufferViewGPUHandle());
 
-		const Asset* pAsset = object.GetAsset();
+		const Asset* pAsset = object.GetAssetPtr();
 
 		const Material* pMaterial = pAsset->GetMaterial();
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_MATERIAL, pMaterial->GetConstantBufferViewGPUHandle());
 
-		const Texture* pTexture = pMaterial->GetTexture();
+		const Texture* pTexture = pMaterial->GetTexturePtr();
 		m_commandList->SetGraphicsRootDescriptorTable(MAIN_TEXTURE, pTexture->GetShaderResourceViewGPUHandle());
 
 		const Mesh* pMesh = pAsset->GetMesh();
@@ -525,8 +527,7 @@ void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCent
 	}
 	if (previousGUIState != nowGUIState)
 	{
-		//TODO: Scene 렌더 설정 초기화와 GUI 렌더 설정 초기화 요청을 분할 후 반영하기
-		m_needResetRenderConfigure = true;
+		m_needResetRenderGUIConfigure = true;
 	}
 
 	ImGui::End();
@@ -553,12 +554,12 @@ void Podo::UpdateRunStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPo
 		ThrowIfFailed(PIXEndCapture(false));
 #endif
 
-		m_needResetScreenMode		= true;
-		m_needResetFactory			= true;
-		m_needResetDevice			= true;
-		m_needResetSwapChain		= true;
-		m_needResetWorkload			= true;
-		m_needResetRenderConfigure	= true;
+		m_needResetScreenMode			= true;
+		m_needResetFactory				= true;
+		m_needResetDevice				= true;
+		m_needResetSwapChain			= true;
+		m_needResetWorkloads				= true;
+		m_needResetRenderSceneConfigure	= true;
 	}
 
 	ImGui::End();

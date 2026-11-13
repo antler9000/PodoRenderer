@@ -55,7 +55,7 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_resource.ReleaseAndGetAddressOf())
 			)
 		);
 
@@ -139,14 +139,14 @@ public:
 		void* pMappedData = nullptr;
 		D3D12_RANGE readRange = { 0, 0 };
 
-		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &cameraConstantBufferData, sizeof(cameraConstantBufferData));
-		m_buffer->Unmap(0, nullptr);
+		m_resource->Unmap(0, nullptr);
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress() const
 	{
-		return m_buffer->GetGPUVirtualAddress();
+		return m_resource->GetGPUVirtualAddress();
 	}
 
 private:
@@ -162,5 +162,5 @@ private:
 	float				m_nearZ			= 0.1f;
 	float				m_farZ			= 1000.0f;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 };

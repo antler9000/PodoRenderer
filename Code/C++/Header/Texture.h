@@ -39,15 +39,15 @@ public:
 			0,
 			D3D12_RESOURCE_FLAG_NONE,
 			DirectX::DDS_LOADER_DEFAULT,
-			m_texture.ReleaseAndGetAddressOf(),
+			m_resource.ReleaseAndGetAddressOf(),
 			nullptr,
 			&isCubeMap
 		);
 	}
 
-	ID3D12Resource* GetTexture() const
+	ID3D12Resource* GetResource() const
 	{
-		return m_texture.Get();
+		return m_resource.Get();
 	}
 
 	void SetShaderResourceViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
@@ -62,7 +62,7 @@ public:
 
 private:
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
 	D3D12_GPU_DESCRIPTOR_HANDLE m_shaderResourceViewGPUHandle = {};
 };

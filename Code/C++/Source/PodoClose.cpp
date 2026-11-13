@@ -21,7 +21,7 @@ void Podo::Close()
 
 void Podo::CloseImGui()
 {
-	if (m_renderConfigureImGuiInitialized == false)
+	if (m_renderGUIConfigureImGuiInitialized == false)
 	{
 		return;
 	}
@@ -30,9 +30,9 @@ void Podo::CloseImGui()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	m_renderConfigureImGuiDescriptorHeapAllocator.Destroy();
+	m_renderGUIConfigureImGuiDescriptorHeapAllocator.Destroy();
 
-	m_renderConfigureImGuiInitialized = false;
+	m_renderGUIConfigureImGuiInitialized = false;
 }
 
 void Podo::CloseFenceEvent()

@@ -60,7 +60,7 @@ public:
 				&depthStencilBufferDesc,
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 				&clearValue,
-				IID_PPV_ARGS(m_texture.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_resource.ReleaseAndGetAddressOf())
 			)
 		);
 	}
@@ -75,9 +75,9 @@ public:
 		return m_scissorRect;
 	}
 
-	ID3D12Resource* GetTexture() const
+	ID3D12Resource* GetResource() const
 	{
-		return m_texture.Get();
+		return m_resource.Get();
 	}
 
 	void SetDepthStencilViewCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE handle)
@@ -105,7 +105,7 @@ private:
 	D3D12_VIEWPORT	m_viewport		= {0.0f, 0.0f, 1024.0f, 1024.0f, 0.0f, 1.0f};
 	D3D12_RECT		m_scissorRect	= {0, 0, 1024, 1024};
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_depthStencilViewCPUHandle		= {};
 	D3D12_GPU_DESCRIPTOR_HANDLE m_shaderResourceViewGPUHandle	= {};
