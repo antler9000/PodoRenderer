@@ -32,6 +32,7 @@
     <ClInclude Include="Code\C++\Header\Asset.h" />
     <ClInclude Include="Code\C++\Header\BaseApp.h" />
     <ClInclude Include="Code\C++\Header\Camera.h" />
+    <ClInclude Include="Code\C++\Header\Changed.h" />
     <ClInclude Include="Code\C++\Header\Debug.h" />
     <ClInclude Include="Code\C++\Header\Light.h" />
     <ClInclude Include="Code\C++\Header\Material.h" />

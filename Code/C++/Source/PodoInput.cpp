@@ -63,7 +63,9 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 			m_isWindowResizing	= false;
 			m_isWindowMoving	= false;
 
-			m_needResetFactory = true;
+			//NOTE: WM_EXITSIZEMOVE 직후에 WM_SIZE나 WM_MOVE가 오지 않을 수도 있으므로, 여기서도 플래그를 요청해야함
+			m_needResetFactory		= true;
+			m_needResetSwapChain	= true;
 
 			if (m_optionFullScreen.IsActive() == false)
 			{
@@ -96,7 +98,8 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 
-			m_needResetFactory = true;
+			m_needResetFactory		= true;
+			m_needResetSwapChain	= true;
 
 			if (m_optionFullScreen.IsActive() == false)
 			{
@@ -115,7 +118,7 @@ LRESULT Podo::HandleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam)
 				return 0;
 			}
 
-			//m_needResetFactory = true;
+			m_needResetFactory = true;
 
 			if (m_optionFullScreen.IsActive() == false)
 			{

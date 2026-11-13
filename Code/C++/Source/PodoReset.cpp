@@ -13,6 +13,7 @@
 #include "Mesh.h"
 #include "Root.h"
 #include "Alloc.h"
+#include "Changed.h"
 #include "Debug.h"
 
 //ImGui
@@ -79,10 +80,8 @@ void Podo::Reset()
 		ResetFactory();
 		ResetAdapterAndOutput();
 
-		//TODO: 어댑터가 안 바뀌었으면 요청 생략하도록 곤치기
-		m_needResetDevice		= true;
-		//TODO: 아웃풋이 안 바뀌었으면 요청 생략하도록 곤치기
-		m_needResetSwapChain	= true;
+		m_needResetDevice		|= m_isAdapterChanged(m_dxgiAdapter.Get());		
+		m_needResetSwapChain	|= m_isOutputChanged(m_dxgiOutputDesc);
 	}
 
 	if (NeedResetDevice() == true)
@@ -96,10 +95,11 @@ void Podo::Reset()
 		ResetCommandAllocator();
 		ResetCommandList();
 
-		m_needResetSwapChain		= true;
-		m_needResetWorkload			= true;
-		m_needResetDescriptor		= true;
-		m_needResetRenderConfigure	= true;
+		m_needResetSwapChain			= true;
+		m_needResetWorkloads			= true;
+		m_needResetDescriptors			= true;
+		m_needResetRenderSceneConfigure	= true;
+		m_needResetRenderGUIConfigure	= true;
 	}
 	
 	if (NeedResetSwapChain() == true)
@@ -111,15 +111,19 @@ void Podo::Reset()
 		ResetBackBufferInfo();
 		ResetViewPort();
 		ResetScissorRectangle();
-		ResetDepthStencilBuffer();
+		ResetDepthStencilBuffer();	
 
-		//TODO: RTV 포맷이 안 바뀌었으면 요청 생략하도록 곤치기
-		m_needResetRenderConfigure	= true;
+		bool isRTVFormatChanged = m_isRTVFormatChanged(m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR);
+
+		//NOTE: RTV, DSV뿐만 아니라 워크로드들의 서술자까지 재초기화되도록 하는 문제점이 있음
+		m_needResetDescriptors			 = true;
+		m_needResetRenderSceneConfigure	|= isRTVFormatChanged;
+		m_needResetRenderGUIConfigure	|= isRTVFormatChanged;
 	}
 
 	if (NeedResetWorkload() == true)
 	{
-		m_needResetWorkload = false;
+		m_needResetWorkloads = false;
 
 		ResetMeshes();
 		ResetTextures();
@@ -129,12 +133,14 @@ void Podo::Reset()
 		ResetLights();
 		ResetCameras();
 
-		m_needResetDescriptor = true;
+		//NOTE: 라이트 객체 개수에 맞춰 PSO가 재초기화되야하는 문제점이 있음
+		m_needResetDescriptors			= true;
+		m_needResetRenderSceneConfigure	= true;
 	}
 
 	if (NeedResetDescriptor() == true)
 	{
-		m_needResetDevice = false;
+		m_needResetDescriptors = false;
 
 		ResetDescriptorHeapRTV();
 		ResetDescriptorHeapDSV();
@@ -142,16 +148,23 @@ void Podo::Reset()
 		ResetRTV();
 		ResetDSV();
 		ResetCBVSRVUAV();
+
+		m_needResetRenderGUIConfigure = true;
 	}
 
-	if (NeedResetRenderConfigure() == true)
+	if (NeedResetRenderSceneConfigure() == true)
 	{
-		m_needResetRenderConfigure = false;
+		m_needResetRenderSceneConfigure = false;
 
-		//TODO: Scene 렌더 설정 초기화와 GUI 렌더 설정 초기화 요청을 분할하기
 		ResetShadowRootSignature();
 		ResetMainRootSignature();
 		ResetPipelineStateObjects();
+	}
+
+	if (NeedResetRenderGUIConfigure() == true)
+	{
+		m_needResetRenderGUIConfigure = false;
+
 		ResetImGui();
 	}
 
@@ -253,14 +266,16 @@ void Podo::ResetAdapterAndOutput()
 			IID_PPV_ARGS(tempAdapter.ReleaseAndGetAddressOf())
 		);
 
-		if (SUCCEEDED(result) == true)
+		if (FAILED(result) == true)
 		{
-			if (ResetOutput(tempAdapter.Get()) == true)
-			{
-				m_dxgiAdapter = tempAdapter;
+			continue;
+		}
 
-				return;
-			}
+		if (ResetOutput(tempAdapter.Get()) == true)
+		{
+			m_dxgiAdapter = tempAdapter;
+
+			return;
 		}
 	}
 }
@@ -551,6 +566,7 @@ void Podo::ResetSwapChain()
 		)
 	);
 
+	//NOTE: ALT+ENTER을 누를 때 "삐-" 시스템 소리가 안 나게 하려면 스왑 체인이 생성된 현 시점에 아래 메서드를 호출해야 함
 	ThrowIfFailed
 	(
 		m_dxgiFactory->MakeWindowAssociation
@@ -1110,7 +1126,7 @@ void Podo::ResetDSV()
 			shadowDepthStencilViewDesc.ViewDimension	= D3D12_DSV_DIMENSION_TEXTURE2D;
 			shadowDepthStencilViewDesc.Flags			= D3D12_DSV_FLAG_NONE;
 
-			m_device->CreateDepthStencilView(pShadow->GetTexture(), &shadowDepthStencilViewDesc, cpuHandle);
+			m_device->CreateDepthStencilView(pShadow->GetResource(), &shadowDepthStencilViewDesc, cpuHandle);
 
 			pShadow->SetDepthStencilViewCPUHandle(cpuHandle);
 		}
@@ -1136,7 +1152,7 @@ void Podo::ResetCBVSRVUAV()
 		srvDesc.Texture2D.PlaneSlice			= 0;
 		srvDesc.Texture2D.ResourceMinLODClamp	= 0.0f;
 
-		m_device->CreateShaderResourceView(texture.GetTexture(), &srvDesc, cpuHandle);
+		m_device->CreateShaderResourceView(texture.GetResource(), &srvDesc, cpuHandle);
 
 		texture.SetShaderResourceViewGPUHandle(gpuHandle);
 
@@ -1148,8 +1164,8 @@ void Podo::ResetCBVSRVUAV()
 	for (auto& [name, material] : m_workloadMaterials)
 	{
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= material.GetBufferGPUAddress();
-		cbvDesc.SizeInBytes		= material.GetBufferWidth();
+		cbvDesc.BufferLocation	= material.GetResourceGPUAddress();
+		cbvDesc.SizeInBytes		= material.GetResourceWidth();
 
 		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
@@ -1163,8 +1179,8 @@ void Podo::ResetCBVSRVUAV()
 	for (auto& [name, object] : m_workloadObjects)
 	{
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= object.GetBufferGPUAddress();
-		cbvDesc.SizeInBytes		= object.GetBufferWidth();
+		cbvDesc.BufferLocation	= object.GetResourceGPUAddress();
+		cbvDesc.SizeInBytes		= object.GetResourceWidth();
 
 		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
@@ -1191,7 +1207,7 @@ void Podo::ResetCBVSRVUAV()
 			srvDesc.Texture2D.PlaneSlice			= 0;
 			srvDesc.Texture2D.ResourceMinLODClamp	= 0.0f;
 
-			m_device->CreateShaderResourceView(pShadow->GetTexture(), &srvDesc, cpuHandle);
+			m_device->CreateShaderResourceView(pShadow->GetResource(), &srvDesc, cpuHandle);
 
 			pShadow->SetShaderResourceViewGPUHandle(gpuHandle);
 		}
@@ -1204,8 +1220,8 @@ void Podo::ResetCBVSRVUAV()
 	for (auto& [name, light] : m_workloadLights)
 	{
 		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= light.GetBufferGPUAddress();
-		cbvDesc.SizeInBytes		= light.GetBufferWidth();
+		cbvDesc.BufferLocation	= light.GetResourceGPUAddress();
+		cbvDesc.SizeInBytes		= light.GetResourceWidth();
 
 		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
@@ -1280,7 +1296,7 @@ void Podo::ResetShadowRootSignature()
 			0,
 			serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(m_renderConfigureShadowRootSignature.ReleaseAndGetAddressOf())
+			IID_PPV_ARGS(m_renderSceneConfigureShadowRootSignature.ReleaseAndGetAddressOf())
 		)
 	);
 }
@@ -1433,7 +1449,7 @@ void Podo::ResetMainRootSignature()
 			0,
 			serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(m_renderConfigureMainRootSignature.ReleaseAndGetAddressOf())
+			IID_PPV_ARGS(m_renderSceneConfigureMainRootSignature.ReleaseAndGetAddressOf())
 		)
 	);
 }
@@ -1456,7 +1472,7 @@ void Podo::ResetPipelineStateObjects()
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateObjectDesc		= {};
 	pipelineStateObjectDesc.InputLayout								= inputLayoutDesc;
-	pipelineStateObjectDesc.pRootSignature							= m_renderConfigureShadowRootSignature.Get();
+	pipelineStateObjectDesc.pRootSignature							= m_renderSceneConfigureShadowRootSignature.Get();
 	pipelineStateObjectDesc.VS										= CD3DX12_SHADER_BYTECODE(shadowVertexShader.Get());
 	pipelineStateObjectDesc.PS										= CD3DX12_SHADER_BYTECODE(shadowPixelShader.Get());
 	pipelineStateObjectDesc.RasterizerState							= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -1471,35 +1487,35 @@ void Podo::ResetPipelineStateObjects()
 	pipelineStateObjectDesc.SampleDesc.Count						= 1;
 	pipelineStateObjectDesc.SampleDesc.Quality						= 0;
 	pipelineStateObjectDesc.DSVFormat								= DXGI_FORMAT_D32_FLOAT;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&pipelineStateObjectDesc, IID_PPV_ARGS(m_renderConfigureShadowPipelineStateObject.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&pipelineStateObjectDesc, IID_PPV_ARGS(m_renderSceneConfigureShadowPipelineStateObject.ReleaseAndGetAddressOf())));
 
 	ComPtr<ID3DBlob> mainVertexShader;
 	ComPtr<ID3DBlob> mainPixelShader;
 	ThrowIfFailed(D3DReadFileToBlob(L"MainVertexShader.cso", &mainVertexShader));
 	ThrowIfFailed(D3DReadFileToBlob(L"MainPixelShader.cso", &mainPixelShader));
-	pipelineStateObjectDesc.pRootSignature							= m_renderConfigureMainRootSignature.Get();
+	pipelineStateObjectDesc.pRootSignature							= m_renderSceneConfigureMainRootSignature.Get();
 	pipelineStateObjectDesc.VS										= CD3DX12_SHADER_BYTECODE(mainVertexShader.Get());
 	pipelineStateObjectDesc.PS										= CD3DX12_SHADER_BYTECODE(mainPixelShader.Get());
 	pipelineStateObjectDesc.RasterizerState							= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);;
 	pipelineStateObjectDesc.NumRenderTargets						= 1;
 	pipelineStateObjectDesc.RTVFormats[0]							= m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR;
 	pipelineStateObjectDesc.DSVFormat								= screenDepthStencilBufferFormat;
-	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&pipelineStateObjectDesc, IID_PPV_ARGS(m_renderConfigureMainPipelineStateObject.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(m_device->CreateGraphicsPipelineState(&pipelineStateObjectDesc, IID_PPV_ARGS(m_renderSceneConfigureMainPipelineStateObject.ReleaseAndGetAddressOf())));
 }
 
 void Podo::ResetImGui()
 {
 	CloseImGui();
 
-	m_renderConfigureImGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), imGuiDescriptorCapacity);
+	m_renderGUIConfigureImGuiDescriptorHeapAllocator.Create(m_device.Get(), m_descriptorHeapCBVSRVUAV.Get(), imGuiDescriptorCapacity);
 
 	ImGui_ImplDX12_InitInfo initInfo = {};
 	initInfo.Device				= m_device.Get();
 	initInfo.CommandQueue		= m_commandQueue.Get();
 	initInfo.NumFramesInFlight	= 1;
 	initInfo.RTVFormat			= m_optionHDR.IsActive() ? screenRTVFormatHDR : screenRTVFormatSDR;
-	initInfo.UserData			= &m_renderConfigureImGuiDescriptorHeapAllocator;
-	initInfo.SrvDescriptorHeap = m_descriptorHeapCBVSRVUAV.Get();
+	initInfo.UserData			= &m_renderGUIConfigureImGuiDescriptorHeapAllocator;
+	initInfo.SrvDescriptorHeap	= m_descriptorHeapCBVSRVUAV.Get();
 	initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* pInitInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpuHandle, D3D12_GPU_DESCRIPTOR_HANDLE* outGpuHandle)
 		{
 			ImGuiDescriptorHeapAllocator* allocator = static_cast<ImGuiDescriptorHeapAllocator*>(pInitInfo->UserData);
@@ -1546,5 +1562,5 @@ void Podo::ResetImGui()
 	pColors[ImGuiCol_SeparatorHovered]	= ImVec4(0.17f, 0.11f, 0.09f, 0.78f);
 	pColors[ImGuiCol_SeparatorActive]	= ImVec4(0.26f, 0.17f, 0.15f, 0.90f);
 
-	m_renderConfigureImGuiInitialized = true;
+	m_renderGUIConfigureImGuiInitialized = true;
 }

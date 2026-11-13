@@ -51,7 +51,7 @@ public:
 				&resourceDesc,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
-				IID_PPV_ARGS(m_buffer.ReleaseAndGetAddressOf())
+				IID_PPV_ARGS(m_resource.ReleaseAndGetAddressOf())
 			)
 		);
 
@@ -121,34 +121,34 @@ public:
 		void* pMappedData		= nullptr;
 		D3D12_RANGE readRange	= { 0, 0 };
 
-		ThrowIfFailed(m_buffer->Map(0, &readRange, &pMappedData));
+		ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
 		std::memcpy(pMappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));
-		m_buffer->Unmap(0, nullptr);
+		m_resource->Unmap(0, nullptr);
 	}
 
-	Asset* GetAsset() const
+	Asset* GetAssetPtr() const
 	{
 		return m_pAsset;
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress() const
 	{
-		return m_buffer->GetGPUVirtualAddress();
+		return m_resource->GetGPUVirtualAddress();
 	}
 	
-	unsigned int GetBufferWidth() const
+	unsigned int GetResourceWidth() const
 	{
-		return static_cast<unsigned int>(m_buffer->GetDesc().Width);
+		return static_cast<unsigned int>(m_resource->GetDesc().Width);
 	}
 
 	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_objectConstantBufferViewGPUHandle = handle;
+		m_constantBufferViewGPUHandle = handle;
 	}
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
 	{
-		return m_objectConstantBufferViewGPUHandle;
+		return m_constantBufferViewGPUHandle;
 	}
 
 private:
@@ -159,7 +159,7 @@ private:
 	DirectX::XMFLOAT4 m_rotation	= { 0.0f, 0.0f, 0.0f, 1.0f };
 	DirectX::XMFLOAT3 m_position	= { 0.0f, 0.0f, 0.0f };
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer = {};
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
-	D3D12_GPU_DESCRIPTOR_HANDLE m_objectConstantBufferViewGPUHandle = {};
+	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferViewGPUHandle = {};
 };

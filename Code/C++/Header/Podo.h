@@ -14,6 +14,7 @@
 #include "Texture.h"
 #include "Mesh.h"
 #include "Alloc.h"
+#include "Changed.h"
 
 //ImGui
 #include "imgui.h"
@@ -234,19 +235,23 @@ private:
 	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForObjects	= {};
 	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForShadows	= {};
 	CD3DX12_GPU_DESCRIPTOR_HANDLE				m_descriptorHeapCBVSRVUAVStartGPUHandleForLights	= {};
-
 	unsigned int								m_descriptorHeapRTVIncrementSize					= {};
 	unsigned int								m_descriptorHeapDSVIncrementSize					= {};
 	unsigned int								m_descriptorHeapCBVSRVUAVIncrementSize				= {};
 
-	ComPtr<ID3D12RootSignature>					m_renderConfigureShadowRootSignature				= {};
-	ComPtr<ID3D12RootSignature>					m_renderConfigureMainRootSignature					= {};
-	ComPtr<ID3D12PipelineState>					m_renderConfigureShadowPipelineStateObject			= {};
-	ComPtr<ID3D12PipelineState>					m_renderConfigureMainPipelineStateObject			= {};
-	bool										m_renderConfigureImGuiInitialized					= {};
-	ImGuiDescriptorHeapAllocator				m_renderConfigureImGuiDescriptorHeapAllocator		= {};
+	ComPtr<ID3D12RootSignature>					m_renderSceneConfigureShadowRootSignature			= {};
+	ComPtr<ID3D12RootSignature>					m_renderSceneConfigureMainRootSignature				= {};
+	ComPtr<ID3D12PipelineState>					m_renderSceneConfigureShadowPipelineStateObject		= {};
+	ComPtr<ID3D12PipelineState>					m_renderSceneConfigureMainPipelineStateObject		= {};
 
-	bool										NeedReset() const									{ return (NeedResetScreenMode() || NeedResetFactory() || NeedResetDevice() || NeedResetSwapChain() || NeedResetWorkload() || NeedResetRenderConfigure()); }
+	bool										m_renderGUIConfigureImGuiInitialized				= {};
+	ImGuiDescriptorHeapAllocator				m_renderGUIConfigureImGuiDescriptorHeapAllocator	= {};
+
+	IsAdapterChanged							m_isAdapterChanged									= {};
+	IsOutputChanged								m_isOutputChanged									= {};
+	IsRTVFormatChanged							m_isRTVFormatChanged								= {};
+
+	bool										NeedReset() const									{ return (NeedResetScreenMode() || NeedResetFactory() || NeedResetDevice() || NeedResetSwapChain() || NeedResetWorkload() || NeedResetRenderSceneConfigure()) || NeedResetRenderGUIConfigure(); }
 	bool										NeedResetScreenMode() const							{ return m_needResetScreenMode; }
 	bool										m_needResetScreenMode								= true;
 	bool										NeedResetFactory() const							{ return (m_needResetFactory || (m_dxgiFactory->IsCurrent() == FALSE)); }
@@ -255,12 +260,14 @@ private:
 	bool										m_needResetDevice									= true;
 	bool										NeedResetSwapChain() const							{ return m_needResetSwapChain; }
 	bool										m_needResetSwapChain								= true;
-	bool										NeedResetWorkload() const							{ return m_needResetWorkload; }
-	bool										m_needResetWorkload									= true;
-	bool										NeedResetDescriptor() const							{ return m_needResetDescriptor; };
-	bool										m_needResetDescriptor								= true;
-	bool										NeedResetRenderConfigure() const					{ return m_needResetRenderConfigure; }
-	bool										m_needResetRenderConfigure							= true;
+	bool										NeedResetWorkload() const							{ return m_needResetWorkloads; }
+	bool										m_needResetWorkloads									= true;
+	bool										NeedResetDescriptor() const							{ return m_needResetDescriptors; };
+	bool										m_needResetDescriptors								= true;
+	bool										NeedResetRenderSceneConfigure() const				{ return m_needResetRenderSceneConfigure; }
+	bool										m_needResetRenderSceneConfigure						= true;
+	bool										NeedResetRenderGUIConfigure() const					{ return m_needResetRenderGUIConfigure; }
+	bool										m_needResetRenderGUIConfigure						= true;
 
 	bool										IsUpdateStopped() const								{ return (IsWorldStopped() && IsRenderStopped()); }
 	bool										IsWorldStopped() const								{ return (m_engineState != ENGINE_STATE_RUN); }
