@@ -398,7 +398,7 @@ void Podo::UpdateShadowScene()
 
 			const Asset* pAsset = object.GetAssetPtr();
 
-			const Mesh* pMesh = pAsset->GetMesh();
+			const Mesh* pMesh = pAsset->GetMeshPtr();
 			pCommandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
 			pCommandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 
@@ -467,13 +467,13 @@ void Podo::UpdateMainScene()
 
 		const Asset* pAsset = object.GetAssetPtr();
 
-		const Material* pMaterial = pAsset->GetMaterial();
+		const Material* pMaterial = pAsset->GetMaterialPtr();
 		pCommandList->SetGraphicsRootDescriptorTable(MAIN_MATERIAL, pMaterial->GetCBVLocationGPUHandle(CurrentFrameResourceIndex()));
 
 		const Texture* pTexture = pMaterial->GetTexturePtr();
 		pCommandList->SetGraphicsRootDescriptorTable(MAIN_TEXTURE, pTexture->GetShaderResourceViewGPUHandle());
 
-		const Mesh* pMesh = pAsset->GetMesh();
+		const Mesh* pMesh = pAsset->GetMeshPtr();
 		pCommandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
 		pCommandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 

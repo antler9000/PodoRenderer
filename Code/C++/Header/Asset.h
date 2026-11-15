@@ -28,18 +28,18 @@ public:
 		m_pMaterial = pMaterial;
 	}
 
-	const Mesh* GetMesh() const
+	const Mesh* GetMeshPtr() const
 	{
 		return m_pMesh;
 	}
 
-	Material* GetMaterial() const
+	Material* GetMaterialPtr() const
 	{
 		return m_pMaterial;
 	}
 
 private:
 
-	const Mesh* m_pMesh		= {};
-	Material* m_pMaterial	= {};
+	const Mesh*	m_pMesh		= {};
+	Material*	m_pMaterial	= {};
 };

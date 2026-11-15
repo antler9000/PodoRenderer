@@ -260,7 +260,7 @@ private:
 	IsOutputChanged									m_isOutputChanged									= {};
 	IsRTVFormatChanged								m_isRTVFormatChanged								= {};
 
-	bool											NeedReset() const									{ return (NeedResetScreenMode() || NeedResetFactory() || NeedResetDevice() || NeedResetSwapChain() || NeedResetWorkload() || NeedResetRenderSceneConfigure()) || NeedResetRenderGUIConfigure(); }
+	bool											NeedReset() const									{ return (NeedResetScreenMode() || NeedResetFactory() || NeedResetDevice() || NeedResetSwapChain() || NeedResetWorkload() || NeedResetDescriptor() || NeedResetRenderSceneConfigure()) || NeedResetRenderGUIConfigure(); }
 	bool											NeedResetScreenMode() const							{ return m_needResetScreenMode; }
 	bool											m_needResetScreenMode								= true;
 	bool											NeedResetFactory() const							{ return (m_needResetFactory || (m_dxgiFactory->IsCurrent() == FALSE)); }
