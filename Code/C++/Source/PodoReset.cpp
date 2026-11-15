@@ -50,6 +50,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <memory>
 #include <utility>
 #include <cstdlib>
 #include <climits>
@@ -402,6 +403,8 @@ void Podo::ResetDevice()
 
 void Podo::ResetFence()
 {
+	m_fenceCurrent = 0;
+
 	ThrowIfFailed(m_device->CreateFence(m_fenceCurrent, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_fence.ReleaseAndGetAddressOf())));
 }
 
@@ -435,31 +438,41 @@ void Podo::ResetCommandQueue()
 
 void Podo::ResetCommandAllocator()
 {
-	ThrowIfFailed
-	(
-		m_device->CreateCommandAllocator
+	m_pCommandAllocators = std::make_unique<ComPtr<ID3D12CommandAllocator>[]>(frameResourceNum);
+
+	for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
+	{
+		ThrowIfFailed
 		(
-			D3D12_COMMAND_LIST_TYPE_DIRECT,
-			IID_PPV_ARGS(m_commandAllocator.ReleaseAndGetAddressOf())
-		)
-	);
+			m_device->CreateCommandAllocator
+			(
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				IID_PPV_ARGS(m_pCommandAllocators[frameResourceIndex].ReleaseAndGetAddressOf())
+			)
+		);
+	}
 }
 
 void Podo::ResetCommandList()
 {
-	ThrowIfFailed
-	(
-		m_device->CreateCommandList
-		(
-			0,
-			D3D12_COMMAND_LIST_TYPE_DIRECT,
-			m_commandAllocator.Get(),
-			nullptr,
-			IID_PPV_ARGS(m_commandList.ReleaseAndGetAddressOf())
-		)
-	);
+	m_pCommandLists = std::make_unique<ComPtr<ID3D12GraphicsCommandList>[]>(frameResourceNum);
 
-	m_commandList->Close();
+	for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
+	{
+		ThrowIfFailed
+		(
+			m_device->CreateCommandList
+			(
+				0,
+				D3D12_COMMAND_LIST_TYPE_DIRECT,
+				m_pCommandAllocators[frameResourceIndex].Get(),
+				nullptr,
+				IID_PPV_ARGS(m_pCommandLists[frameResourceIndex].ReleaseAndGetAddressOf())
+			)
+		);
+
+		m_pCommandLists[frameResourceIndex]->Close();
+	}
 }
 
 void Podo::ResetHDRSwapChainSupport()
@@ -778,7 +791,7 @@ void Podo::ResetMaterials()
 
 	{
 		Material steelMaterial;
-		steelMaterial.Create(m_device.Get());
+		steelMaterial.Create(m_device.Get(), frameResourceNum);
 		steelMaterial.SetTexturePtr(&m_workloadTextures.at("Steel"));
 
 		XMFLOAT3	diffuseAlbedo	= { 0.20f, 0.20f, 0.20f };
@@ -787,14 +800,14 @@ void Podo::ResetMaterials()
 		steelMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		steelMaterial.SetFresnelR0(fresnelR0);
 		steelMaterial.SetShininess(shininess);
-		steelMaterial.UpdateBuffer();
+		steelMaterial.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadMaterials["Steel"] = std::move(steelMaterial);
 	}
 
 	{
 		Material woodMaterial;
-		woodMaterial.Create(m_device.Get());
+		woodMaterial.Create(m_device.Get(), frameResourceNum);
 		woodMaterial.SetTexturePtr(&m_workloadTextures.at("Wood"));
 
 		XMFLOAT3	diffuseAlbedo	= { 0.80f, 0.70f, 0.40f };
@@ -803,14 +816,14 @@ void Podo::ResetMaterials()
 		woodMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		woodMaterial.SetFresnelR0(fresnelR0);
 		woodMaterial.SetShininess(shininess);
-		woodMaterial.UpdateBuffer();
+		woodMaterial.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadMaterials["Wood"] = std::move(woodMaterial);
 	}
 
 	{
 		Material plasticMaterial;
-		plasticMaterial.Create(m_device.Get());
+		plasticMaterial.Create(m_device.Get(), frameResourceNum);
 		plasticMaterial.SetTexturePtr(&m_workloadTextures.at("Plastic"));
 
 		XMFLOAT3	diffuseAlbedo	= { 0.70f, 1.00f, 0.70f };
@@ -819,14 +832,14 @@ void Podo::ResetMaterials()
 		plasticMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		plasticMaterial.SetFresnelR0(fresnelR0);
 		plasticMaterial.SetShininess(shininess);
-		plasticMaterial.UpdateBuffer();
+		plasticMaterial.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadMaterials["Plastic"] = std::move(plasticMaterial);
 	}
 
 	{
 		Material paperMaterial;
-		paperMaterial.Create(m_device.Get());
+		paperMaterial.Create(m_device.Get(), frameResourceNum);
 		paperMaterial.SetTexturePtr(&m_workloadTextures.at("Paper"));
 
 		XMFLOAT3	diffuseAlbedo	= { 0.90f, 0.90f, 0.90f };
@@ -835,7 +848,7 @@ void Podo::ResetMaterials()
 		paperMaterial.SetDiffuseAlbedo(diffuseAlbedo);
 		paperMaterial.SetFresnelR0(fresnelR0);
 		paperMaterial.SetShininess(shininess);
-		paperMaterial.UpdateBuffer();
+		paperMaterial.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadMaterials["Paper"] = std::move(paperMaterial);
 	}
@@ -882,7 +895,7 @@ void Podo::ResetObjects()
 
 	{
 		Object steelBoxObject;
-		steelBoxObject.Create(m_device.Get());
+		steelBoxObject.Create(m_device.Get(), frameResourceNum);
 		steelBoxObject.SetAssetPtr(&m_workloadAssets.at("SteelCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
@@ -892,14 +905,14 @@ void Podo::ResetObjects()
 		steelBoxObject.SetScale(scale);
 		steelBoxObject.SetRotation(lookDirection, upDirection);
 		steelBoxObject.SetPosition(position);
-		steelBoxObject.UpdateBuffer();
+		steelBoxObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadObjects["SteelBox"] = std::move(steelBoxObject);
 	}
 
 	{
 		Object woodBoxObject;
-		woodBoxObject.Create(m_device.Get());
+		woodBoxObject.Create(m_device.Get(), frameResourceNum);
 		woodBoxObject.SetAssetPtr(&m_workloadAssets.at("WoodCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 1.0f, 1.0f };
@@ -909,14 +922,14 @@ void Podo::ResetObjects()
 		woodBoxObject.SetScale(scale);
 		woodBoxObject.SetRotation(lookDirection, upDirection);
 		woodBoxObject.SetPosition(position);
-		woodBoxObject.UpdateBuffer();
+		woodBoxObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadObjects["WoodBox"] = std::move(woodBoxObject);
 	}
 
 	{
 		Object plasticPillarObject;
-		plasticPillarObject.Create(m_device.Get());
+		plasticPillarObject.Create(m_device.Get(), frameResourceNum);
 		plasticPillarObject.SetAssetPtr(&m_workloadAssets.at("PlasticCube"));
 
 		XMFLOAT3 scale			= { 1.0f, 6.0f, 1.0f };
@@ -926,14 +939,14 @@ void Podo::ResetObjects()
 		plasticPillarObject.SetScale(scale);
 		plasticPillarObject.SetRotation(lookDirection, upDirection);
 		plasticPillarObject.SetPosition(position);
-		plasticPillarObject.UpdateBuffer();
+		plasticPillarObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadObjects["PlasticPillar"] = std::move(plasticPillarObject);
 	}
 
 	{
 		Object paperFloorObject;
-		paperFloorObject.Create(m_device.Get());
+		paperFloorObject.Create(m_device.Get(), frameResourceNum);
 		paperFloorObject.SetAssetPtr(&m_workloadAssets.at("PaperCube"));
 
 		XMFLOAT3 scale			= { 10.0f, 0.1f, 10.0f };
@@ -943,7 +956,7 @@ void Podo::ResetObjects()
 		paperFloorObject.SetScale(scale);
 		paperFloorObject.SetRotation(lookDirection, upDirection);
 		paperFloorObject.SetPosition(position);
-		paperFloorObject.UpdateBuffer();
+		paperFloorObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadObjects["PaperFloor"] = std::move(paperFloorObject);
 	}
@@ -955,7 +968,7 @@ void Podo::ResetLights()
 
 	{
 		Light sun1;
-		sun1.Create(m_device.Get(), true, 2048, 2048);
+		sun1.Create(m_device.Get(), frameResourceNum, true, 2048, 2048);
 
 		XMFLOAT3 strength	= { 0.6f, 0.5f, 0.5f };
 		XMVECTOR direction	= XMVectorSet(0.0f,  -1.0f, 0.0f, 0.0f);
@@ -964,14 +977,14 @@ void Podo::ResetLights()
 		sun1.SetDirection(direction);
 		sun1.SetPosition(poistion);
 		sun1.SetViewVolume(50.0f, 50.0f, 0.1f, 1000.0f);
-		sun1.UpdateBuffer();
+		sun1.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadLights["Sun1"] = std::move(sun1);
 	}
 
 	{
 		Light sun2;
-		sun2.Create(m_device.Get(), true, 2048, 2048);
+		sun2.Create(m_device.Get(), frameResourceNum, true, 2048, 2048);
 
 		XMFLOAT3 strength	= { 0.6f, 0.5f, 0.5f };
 		XMVECTOR direction	= XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
@@ -980,7 +993,7 @@ void Podo::ResetLights()
 		sun2.SetDirection(direction);
 		sun2.SetPosition(poistion);
 		sun2.SetViewVolume(50.0f, 50.0f, 0.1f, 1000.0f);
-		sun2.UpdateBuffer();
+		sun2.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadLights["Sun2"] = std::move(sun2);
 	}
@@ -992,7 +1005,7 @@ void Podo::ResetCameras()
 
 	{
 		Camera mainCamera;
-		mainCamera.Create(m_device.Get());
+		mainCamera.Create(m_device.Get(), frameResourceNum);
 
 		XMFLOAT3 ambientLightStrength	= { 0.05f, 0.05f, 0.05f };
 		XMVECTOR position				= XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
@@ -1003,8 +1016,8 @@ void Podo::ResetCameras()
 		mainCamera.SetPosition(position);
 		mainCamera.SetTarget(target);
 		mainCamera.SetUpDirection(upDirection);
-		mainCamera.SetViewVolume(cameraHorizontalFOV, m_screenBackBufferAspectRatio, cameraNearZ, cameraFarZ);
-		mainCamera.UpdateBuffer();
+		mainCamera.SetViewVolume(cameraVerticalFOV, m_screenBackBufferAspectRatio, cameraNearZ, cameraFarZ);
+		mainCamera.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 
 		m_workloadCameras["MainCamera"] = std::move(mainCamera);
 	}
@@ -1057,10 +1070,10 @@ void Podo::ResetDescriptorHeapCBVSRVUAV()
 	//NOTE: 각 라이트 객체는 스스로의 CBV와 하위 쉐도우 맵의 SRV를 하나씩 사용하므로 서술자 2개가 필요함
 	//		또한 라이트가 0개인 경우에도 쉐도우와 라이트 시작점 핸들이 힙 바깥을 가리키지 않도록 힙의 끝에 빈 공간 1개를 추가함
 	size_t workloadDescriptorDemand =
-		m_workloadTextures.size()	+
-		m_workloadMaterials.size()	+
-		m_workloadObjects.size()	+
-		2 * m_workloadLights.size() +
+		frameResourceNum * m_workloadTextures.size()	+
+		frameResourceNum * m_workloadMaterials.size()	+
+		frameResourceNum * m_workloadObjects.size()		+
+		frameResourceNum * m_workloadLights.size() * 2	+
 		1;
 	
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
@@ -1144,13 +1157,13 @@ void Podo::ResetCBVSRVUAV()
 	for (auto& [name, texture] : m_workloadTextures)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format							= DXGI_FORMAT_BC7_UNORM_SRGB;
-		srvDesc.ViewDimension					= D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Shader4ComponentMapping			= D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Texture2D.MostDetailedMip		= 0;
-		srvDesc.Texture2D.MipLevels				= -1;
-		srvDesc.Texture2D.PlaneSlice			= 0;
-		srvDesc.Texture2D.ResourceMinLODClamp	= 0.0f;
+		srvDesc.Format = DXGI_FORMAT_BC7_UNORM_SRGB;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
 		m_device->CreateShaderResourceView(texture.GetResource(), &srvDesc, cpuHandle);
 
@@ -1161,33 +1174,39 @@ void Podo::ResetCBVSRVUAV()
 	}
 
 	m_descriptorHeapCBVSRVUAVStartGPUHandleForMaterials = gpuHandle;
-	for (auto& [name, material] : m_workloadMaterials)
+	for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
 	{
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= material.GetResourceGPUAddress();
-		cbvDesc.SizeInBytes		= material.GetResourceWidth();
+		for (auto& [name, material] : m_workloadMaterials)
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation	= material.GetResourceGPUAddress(frameResourceIndex);
+			cbvDesc.SizeInBytes		= material.GetResourceWidth();
 
-		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
+			m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
-		material.SetConstantBufferViewGPUHandle(gpuHandle);
+			material.SetCBVLocationGPUHandle(frameResourceIndex, gpuHandle);
 
-		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
-		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+		}
 	}
 
 	m_descriptorHeapCBVSRVUAVStartGPUHandleForObjects = gpuHandle;
-	for (auto& [name, object] : m_workloadObjects)
+	for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
 	{
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= object.GetResourceGPUAddress();
-		cbvDesc.SizeInBytes		= object.GetResourceWidth();
+		for (auto& [name, object] : m_workloadObjects)
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation	= object.GetResourceGPUAddress(frameResourceIndex);
+			cbvDesc.SizeInBytes		= object.GetResourceWidth();
 
-		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
+			m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
-		object.SetConstantBufferViewGPUHandle(gpuHandle);
+			object.SetConstantBufferViewGPUHandle(frameResourceIndex, gpuHandle);
 
-		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
-		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+		}
 	}
 
 	//NOTE: 라이트와 쉐도우가 동일한 인덱스를 가지기 위해, 쉐도우를 사용하지 않는 광원이 있더라도 빈 칸을 당겨 채우지 않음
@@ -1217,18 +1236,21 @@ void Podo::ResetCBVSRVUAV()
 	}
 
 	m_descriptorHeapCBVSRVUAVStartGPUHandleForLights = gpuHandle;
-	for (auto& [name, light] : m_workloadLights)
+	for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
 	{
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation	= light.GetResourceGPUAddress();
-		cbvDesc.SizeInBytes		= light.GetResourceWidth();
+		for (auto& [name, light] : m_workloadLights)
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+			cbvDesc.BufferLocation	= light.GetResourceGPUAddress(frameResourceIndex);
+			cbvDesc.SizeInBytes		= light.GetResourceWidth();
 
-		m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
+			m_device->CreateConstantBufferView(&cbvDesc, cpuHandle);
 
-		light.SetConstantBufferViewGPUHandle(gpuHandle);
+			light.SetCBVLocationGPUHandle(frameResourceIndex, gpuHandle);
 
-		cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
-		gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			cpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+			gpuHandle.Offset(1, m_descriptorHeapCBVSRVUAVIncrementSize);
+		}
 	}
 }
 
@@ -1476,7 +1498,7 @@ void Podo::ResetPipelineStateObjects()
 	pipelineStateObjectDesc.VS										= CD3DX12_SHADER_BYTECODE(shadowVertexShader.Get());
 	pipelineStateObjectDesc.PS										= CD3DX12_SHADER_BYTECODE(shadowPixelShader.Get());
 	pipelineStateObjectDesc.RasterizerState							= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	pipelineStateObjectDesc.RasterizerState.DepthBias				= 3000;
+	pipelineStateObjectDesc.RasterizerState.DepthBias				= 5000;
 	pipelineStateObjectDesc.RasterizerState.SlopeScaledDepthBias	= 1.0f;
 	pipelineStateObjectDesc.RasterizerState.DepthBiasClamp			= 0.0f;
 	pipelineStateObjectDesc.BlendState								= CD3DX12_BLEND_DESC(D3D12_DEFAULT);

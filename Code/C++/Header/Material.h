@@ -16,6 +16,7 @@
 //C++
 #include <cstring>
 #include <cstdint>
+#include <memory>
 
 //NOTE: C++의 XMFLOAT3는 4바이트 경계에 맞춰지므로, 셰이더 상수 버퍼의 16바이트 경계에 맞추기 위해 패딩을 추가함
 struct MaterialBuffer
@@ -39,11 +40,19 @@ public:
 	Material(const Material& sourceMaterial) = delete;
 	Material& operator=(const Material& sourceMaterial) = delete;
 
-	void Create(ID3D12Device* pDevice)
+	void Create(ID3D12Device* pDevice, unsigned int frameResourceNum)
 	{
-		constexpr unsigned int	constantBufferSize	= (sizeof(MaterialBuffer) + 255) & ~255;
+		m_frameResourceNum	= frameResourceNum;
+		m_pDirtyFlags		= std::make_unique<bool[]>(frameResourceNum);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
+
+		unsigned int			resourceSize		= frameResourceNum * frameResourceSize;
 		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(resourceSize);
 
 		ThrowIfFailed
 		(
@@ -58,7 +67,12 @@ public:
 			)
 		);
 
-		UpdateBuffer();
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
+		{
+			CheckAndUpdateFrameResource(frameResourceIndex);
+		}
+
+		m_pCBVLocationGPUHandles = std::make_unique<D3D12_GPU_DESCRIPTOR_HANDLE[]>(frameResourceNum);
 	}
 
 	//NOTE: 텍스처는 업데이트가 이뤄지지 않으므로 const로 받아 저장함
@@ -70,31 +84,55 @@ public:
 	void SetDiffuseAlbedo(DirectX::XMFLOAT3 diffuseAlbedo)
 	{
 		m_diffuseAlbedo = diffuseAlbedo;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	void SetFresnelR0(DirectX::XMFLOAT3 fresnelR0)
 	{
 		m_fresnelR0 = fresnelR0;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	void SetShininess(float shininess)
 	{
 		m_shininess = shininess;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
-	void UpdateBuffer()
+	void CheckAndUpdateFrameResource(unsigned int frameResourceIndex)
 	{
-		MaterialBuffer materialConstantBufferData	= {};
-		materialConstantBufferData.diffuseAlbedo	= m_diffuseAlbedo;
-		materialConstantBufferData.fresnelR0		= m_fresnelR0;
-		materialConstantBufferData.shininess		= m_shininess;
+		if (m_pDirtyFlags[frameResourceIndex] == true)
+		{
+			MaterialBuffer materialFrameResourceData = {};
+			materialFrameResourceData.diffuseAlbedo = m_diffuseAlbedo;
+			materialFrameResourceData.fresnelR0 = m_fresnelR0;
+			materialFrameResourceData.shininess = m_shininess;
 
-		void* pMappedData = nullptr;
-		D3D12_RANGE readRange = { 0, 0 };
+			unsigned int offset = frameResourceIndex * frameResourceSize;
 
-		ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
-		std::memcpy(pMappedData, &materialConstantBufferData, sizeof(materialConstantBufferData));
-		m_resource->Unmap(0, nullptr);
+			void* pMappedData = nullptr;
+			D3D12_RANGE readRange = { 0, 0 };
+			ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
+
+			std::memcpy(static_cast<std::uint8_t*>(pMappedData) + offset, &materialFrameResourceData, sizeof(MaterialBuffer));
+
+			D3D12_RANGE writtenRange = { offset, offset + frameResourceSize };
+			m_resource->Unmap(0, &writtenRange);
+
+			m_pDirtyFlags[frameResourceIndex] = false;
+		}
 	}
 
 	const Texture* GetTexturePtr() const
@@ -102,27 +140,34 @@ public:
 		return m_pTexture;
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress(unsigned int frameResourceIndex) const
 	{
-		return m_resource->GetGPUVirtualAddress();
+		return m_resource->GetGPUVirtualAddress() + static_cast<D3D12_GPU_VIRTUAL_ADDRESS>(frameResourceIndex) * frameResourceSize;
 	}
 
 	unsigned int GetResourceWidth() const
 	{
-		return static_cast<unsigned int>(m_resource->GetDesc().Width);
+		return frameResourceSize;
 	}
 
-	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+	void SetCBVLocationGPUHandle(unsigned int frameResourceIndex, D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_constantBufferViewGPUHandle = handle;
+		m_pCBVLocationGPUHandles[frameResourceIndex] = handle;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
+	D3D12_GPU_DESCRIPTOR_HANDLE GetCBVLocationGPUHandle(unsigned int frameResourceIndex) const
 	{
-		return m_constantBufferViewGPUHandle;
+		return m_pCBVLocationGPUHandles[frameResourceIndex];
 	}
 
 private:
+
+	static constexpr unsigned int frameResourceSize = (sizeof(MaterialBuffer) + 255) & ~255;
+
+private:
+
+	unsigned int m_frameResourceNum			= {};
+	std::unique_ptr<bool[]> m_pDirtyFlags	= {};
 
 	const Texture* m_pTexture = {};
 
@@ -132,5 +177,5 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
-	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferViewGPUHandle = {};
+	std::unique_ptr<D3D12_GPU_DESCRIPTOR_HANDLE[]> m_pCBVLocationGPUHandles = {};
 };

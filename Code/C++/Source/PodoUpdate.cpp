@@ -40,6 +40,7 @@
 #include <format>
 #include <string>
 #include <cstdlib>
+#include <cstdint>
 
 using namespace DirectX;
 using std::wstring;
@@ -49,9 +50,9 @@ void Podo::Update()
 	PIXScopedEvent(PIX_COLOR_INDEX(1), L"CPU: 01. Frame Time");
 
 	{
-		PIXScopedEvent(PIX_COLOR_INDEX(2), L"CPU: 02. Wait GPU");
+		PIXScopedEvent(PIX_COLOR_INDEX(2), L"CPU: 02. Wait Fence");
 
-		FlushCommandQueue();
+		UpdateCheckFence();
 	}
 
 	{
@@ -66,6 +67,28 @@ void Podo::Update()
 		PIXScopedEvent(PIX_COLOR_INDEX(4), L"CPU: 04. Render Logic");
 
 		UpdateRender();
+	}
+
+	{
+		PIXScopedEvent(PIX_COLOR_INDEX(11), L"CPU: 14. Set Fence");
+
+		UpdateSetFence();
+	}
+}
+
+void Podo::UpdateCheckFence()
+{
+	std::uint64_t completedFence = m_fence->GetCompletedValue();
+
+	if (m_fenceCurrent - completedFence > frameResourceNum)
+	{
+		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceCurrent - frameResourceNum, m_fenceEvent));
+
+		auto waitResult = WaitForSingleObject(m_fenceEvent, INFINITE);
+		if (waitResult != WAIT_OBJECT_0)
+		{
+			Throw("wait fence failed");
+		}
 	}
 }
 
@@ -121,7 +144,7 @@ void Podo::UpdateWorld()
 
 		XMVECTOR position = XMVectorSet(oscillation, 0.0f, -2.0f, 1.0f);
 		horizontalSteelBoxObject.SetPosition(position);
-		horizontalSteelBoxObject.UpdateBuffer();
+		horizontalSteelBoxObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 	}
 
 	{
@@ -129,7 +152,7 @@ void Podo::UpdateWorld()
 
 		XMVECTOR position = XMVectorSet(0.0f, oscillation, 2.0f, 1.0f);
 		verticalWoodBoxObject.SetPosition(position);
-		verticalWoodBoxObject.UpdateBuffer();
+		verticalWoodBoxObject.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 	}
 
 	{
@@ -145,7 +168,7 @@ void Podo::UpdateWorld()
 		XMVECTOR poistion	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f) - direction;
 		RedSun.SetDirection(direction);
 		RedSun.SetPosition(poistion);
-		RedSun.UpdateBuffer();
+		RedSun.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 	}
 
 	{
@@ -162,7 +185,7 @@ void Podo::UpdateWorld()
 		XMVECTOR poistion	= XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f) - direction;
 		blueMoon.SetDirection(direction);
 		blueMoon.SetPosition(poistion);
-		blueMoon.UpdateBuffer();
+		blueMoon.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 	}
 
 	{
@@ -181,7 +204,28 @@ void Podo::UpdateWorld()
 		mainCamera.SetPosition(cameraPosition);
 		mainCamera.SetTarget(cameraTarget);
 		mainCamera.SetViewVolume(XM_PIDIV4, m_screenBackBufferAspectRatio, 0.1f, 1000.0f);
-		mainCamera.UpdateBuffer();
+		mainCamera.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
+	}
+
+	//NOTE: 이번 프레임 자원이 이전 프레임 자원보다 더 과거의 상태일 수 있으므로 확인 후 업데이트해야 함
+	for (auto& [name, material] : m_workloadMaterials)
+	{
+		material.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
+	}
+
+	for (auto& [name, object] : m_workloadObjects)
+	{
+		object.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
+	}
+
+	for (auto& [name, light] : m_workloadLights)
+	{
+		light.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
+	}
+
+	for (auto& [name, camera] : m_workloadCameras)
+	{
+		camera.CheckAndUpdateFrameResource(CurrentFrameResourceIndex());
 	}
 }
 
@@ -192,23 +236,26 @@ void Podo::UpdateRender()
 		return;
 	}
 
+	ID3D12GraphicsCommandList*	pCommandList		= m_pCommandLists[CurrentFrameResourceIndex()].Get();
+	ID3D12CommandAllocator*		pCommandAllocator	= m_pCommandAllocators[CurrentFrameResourceIndex()].Get();
+
 	{
 		PIXScopedEvent(PIX_COLOR_INDEX(5), L"CPU: 05. Reset Command List");
 
-		ThrowIfFailed(m_commandAllocator->Reset());
-		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
+		ThrowIfFailed(pCommandAllocator->Reset());
+		ThrowIfFailed(pCommandList->Reset(pCommandAllocator, nullptr));
 	}
 
 	{
-		PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(1), L"GPU: 1. Frame Time");
+		PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(1), L"GPU: 1. Frame Time");
 
 		{
 			PIXScopedEvent(PIX_COLOR_INDEX(6), L"CPU: 06. Prepare Draw");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(2), L"GPU: 2. Prepare Draw");
+			PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(2), L"GPU: 2. Prepare Draw");
 
 			ID3D12DescriptorHeap* ppDescriptorHeap[] = { m_descriptorHeapCBVSRVUAV.Get() };
-			m_commandList->SetDescriptorHeaps(_countof(ppDescriptorHeap), ppDescriptorHeap);
-			m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			pCommandList->SetDescriptorHeaps(_countof(ppDescriptorHeap), ppDescriptorHeap);
+			pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			CD3DX12_RESOURCE_BARRIER barrierToRenderTarget = CD3DX12_RESOURCE_BARRIER::Transition
 			(
@@ -216,28 +263,28 @@ void Podo::UpdateRender()
 				D3D12_RESOURCE_STATE_PRESENT,
 				D3D12_RESOURCE_STATE_RENDER_TARGET
 			);
-			m_commandList->ResourceBarrier(1, &barrierToRenderTarget);
+			pCommandList->ResourceBarrier(1, &barrierToRenderTarget);
 		}
 
 		if (m_engineState == ENGINE_STATE_RUN)
 		{
 			PIXScopedEvent(PIX_COLOR_INDEX(7), L"CPU: 07. Draw Scene");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(3), L"GPU: 3. Draw Scene");
+			PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(3), L"GPU: 3. Draw Scene");
 
 			UpdateScene();
 		}
 
 		{
 			PIXScopedEvent(PIX_COLOR_INDEX(8), L"CPU: 10. Draw GUI");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(4), L"GPU: 6. Draw GUI");
+			PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(4), L"GPU: 6. Draw GUI");
 
 			if (m_engineState != ENGINE_STATE_RUN)
 			{
 				CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandleRTV = m_descriptorHeapRTVStartCPUHandle;
 				cpuHandleRTV.Offset(m_screenBackBufferIndex, m_descriptorHeapRTVIncrementSize);
 
-				m_commandList->OMSetRenderTargets(1, &cpuHandleRTV, TRUE, nullptr);
-				m_commandList->ClearRenderTargetView(cpuHandleRTV, DirectX::Colors::Black, 0, nullptr);
+				pCommandList->OMSetRenderTargets(1, &cpuHandleRTV, TRUE, nullptr);
+				pCommandList->ClearRenderTargetView(cpuHandleRTV, DirectX::Colors::Black, 0, nullptr);
 			}
 
 			UpdateGUI();
@@ -245,7 +292,7 @@ void Podo::UpdateRender()
 
 		{
 			PIXScopedEvent(PIX_COLOR_INDEX(9), L"CPU: 11. Prepare Present");
-			PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(5), L"GPU: 7. Prepare Present");
+			PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(5), L"GPU: 7. Prepare Present");
 
 			CD3DX12_RESOURCE_BARRIER barrierToPresent = CD3DX12_RESOURCE_BARRIER::Transition
 			(
@@ -253,15 +300,15 @@ void Podo::UpdateRender()
 				D3D12_RESOURCE_STATE_RENDER_TARGET,
 				D3D12_RESOURCE_STATE_PRESENT
 			);
-			m_commandList->ResourceBarrier(1, &barrierToPresent);
+			pCommandList->ResourceBarrier(1, &barrierToPresent);
 		}
 	}
 
 	{
 		PIXScopedEvent(PIX_COLOR_INDEX(10), L"CPU: 12. Submit Command List");
 
-		ThrowIfFailed(m_commandList->Close());
-		ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
+		ThrowIfFailed(pCommandList->Close());
+		ID3D12CommandList* ppCommandList[] = { pCommandList };
 		m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
 	}
 
@@ -283,16 +330,18 @@ void Podo::UpdateRender()
 
 void Podo::UpdateScene()
 {
+	ID3D12GraphicsCommandList* pCommandList = m_pCommandLists[CurrentFrameResourceIndex()].Get();
+
 	{
 		PIXScopedEvent(PIX_COLOR_INDEX(7), L"CPU: 08. Shadow Pass");
-		PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(3), L"GPU: 4. Shadow Pass");
+		PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(3), L"GPU: 4. Shadow Pass");
 
 		UpdateShadowScene();
 	}
 
 	{
 		PIXScopedEvent(PIX_COLOR_INDEX(7), L"CPU: 09. Main Pass");
-		PIXScopedEvent(m_commandList.Get(), PIX_COLOR_INDEX(3), L"GPU: 5. Main Pass");
+		PIXScopedEvent(pCommandList, PIX_COLOR_INDEX(3), L"GPU: 5. Main Pass");
 
 		UpdateMainScene();
 	}
@@ -300,8 +349,11 @@ void Podo::UpdateScene()
 
 void Podo::UpdateShadowScene()
 {	
-	m_commandList->SetPipelineState(m_renderSceneConfigureShadowPipelineStateObject.Get());
-	m_commandList->SetGraphicsRootSignature(m_renderSceneConfigureShadowRootSignature.Get());
+	ID3D12GraphicsCommandList*	pCommandList		= m_pCommandLists[CurrentFrameResourceIndex()].Get();
+	ID3D12CommandAllocator*		pCommandAllocator	= m_pCommandAllocators[CurrentFrameResourceIndex()].Get();
+
+	pCommandList->SetPipelineState(m_renderSceneConfigureShadowPipelineStateObject.Get());
+	pCommandList->SetGraphicsRootSignature(m_renderSceneConfigureShadowRootSignature.Get());
 
 	for (const auto& [name, light] : m_workloadLights)
 	{
@@ -318,16 +370,16 @@ void Podo::UpdateShadowScene()
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 			D3D12_RESOURCE_STATE_DEPTH_WRITE
 		);
-		m_commandList->ResourceBarrier(1, &barrierToDepthWrite);
+		pCommandList->ResourceBarrier(1, &barrierToDepthWrite);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE	depthStencilViewHandle	= pShadow->GetDepthStencilViewCPUHandle();
 		D3D12_VIEWPORT				viewport				= pShadow->GetViewport();
 		RECT						scissorRect				= pShadow->GetScissorRect();
-		m_commandList->OMSetRenderTargets(0, nullptr, TRUE, &depthStencilViewHandle);
-		m_commandList->RSSetViewports(1, &viewport);
-		m_commandList->RSSetScissorRects(1, &scissorRect);
+		pCommandList->OMSetRenderTargets(0, nullptr, TRUE, &depthStencilViewHandle);
+		pCommandList->RSSetViewports(1, &viewport);
+		pCommandList->RSSetScissorRects(1, &scissorRect);
 
-		m_commandList->ClearDepthStencilView
+		pCommandList->ClearDepthStencilView
 		(
 			pShadow->GetDepthStencilViewCPUHandle(),
 			D3D12_CLEAR_FLAG_DEPTH,
@@ -337,20 +389,20 @@ void Podo::UpdateShadowScene()
 			nullptr
 		);
 
-		m_commandList->SetGraphicsRootDescriptorTable(SHADOW_LIGHT, light.GetConstantBufferViewGPUHandle());
+		pCommandList->SetGraphicsRootDescriptorTable(SHADOW_LIGHT, light.GetCBVLocationGPUHandle(CurrentFrameResourceIndex()));
 
 		//NOTE: 오브젝트를 중심으로 순회하는 반복문을 임시로 사용함
 		for (const auto& [name, object] : m_workloadObjects)
 		{
-			m_commandList->SetGraphicsRootDescriptorTable(SHADOW_OBJECT, object.GetConstantBufferViewGPUHandle());
+			pCommandList->SetGraphicsRootDescriptorTable(SHADOW_OBJECT, object.GetConstantBufferViewGPUHandle(CurrentFrameResourceIndex()));
 
 			const Asset* pAsset = object.GetAssetPtr();
 
 			const Mesh* pMesh = pAsset->GetMesh();
-			m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
-			m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
+			pCommandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
+			pCommandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 
-			m_commandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
+			pCommandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
 		}
 
 		CD3DX12_RESOURCE_BARRIER  barrierToPixelShader = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -358,24 +410,27 @@ void Podo::UpdateShadowScene()
 			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		);
-		m_commandList->ResourceBarrier(1, &barrierToPixelShader);
+		pCommandList->ResourceBarrier(1, &barrierToPixelShader);
 	}
 }
 
 void Podo::UpdateMainScene()
 {
-	m_commandList->SetPipelineState(m_renderSceneConfigureMainPipelineStateObject.Get());
-	m_commandList->SetGraphicsRootSignature(m_renderSceneConfigureMainRootSignature.Get());
+	ID3D12GraphicsCommandList*	pCommandList		= m_pCommandLists[CurrentFrameResourceIndex()].Get();
+	ID3D12CommandAllocator*		pCommandAllocator	= m_pCommandAllocators[CurrentFrameResourceIndex()].Get();
+
+	pCommandList->SetPipelineState(m_renderSceneConfigureMainPipelineStateObject.Get());
+	pCommandList->SetGraphicsRootSignature(m_renderSceneConfigureMainRootSignature.Get());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandleRTV = m_descriptorHeapRTVStartCPUHandle;
 	cpuHandleRTV.Offset(m_screenBackBufferIndex, m_descriptorHeapRTVIncrementSize);
 
-	m_commandList->OMSetRenderTargets(1, &cpuHandleRTV, true, &m_descriptorHeapDSVStartCPUHandle);
-	m_commandList->RSSetViewports(1, &m_screenViewport);
-	m_commandList->RSSetScissorRects(1, &m_screenScissorRect);
+	pCommandList->OMSetRenderTargets(1, &cpuHandleRTV, true, &m_descriptorHeapDSVStartCPUHandle);
+	pCommandList->RSSetViewports(1, &m_screenViewport);
+	pCommandList->RSSetScissorRects(1, &m_screenScissorRect);
 
-	m_commandList->ClearRenderTargetView(cpuHandleRTV, DirectX::Colors::Black, 0, nullptr);
-	m_commandList->ClearDepthStencilView
+	pCommandList->ClearRenderTargetView(cpuHandleRTV, DirectX::Colors::Black, 0, nullptr);
+	pCommandList->ClearDepthStencilView
 	(
 		m_descriptorHeapDSVStartCPUHandle,
 		D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
@@ -386,30 +441,43 @@ void Podo::UpdateMainScene()
 	);
 
 	const Camera& camera = m_workloadCameras.at("MainCamera");
-	m_commandList->SetGraphicsRootConstantBufferView(MAIN_CAMERA, camera.GetResourceGPUAddress());
+	pCommandList->SetGraphicsRootConstantBufferView(MAIN_CAMERA, camera.GetResourceGPUAddress(CurrentFrameResourceIndex()));
 
-	m_commandList->SetGraphicsRootDescriptorTable(MAIN_LIGHT, m_descriptorHeapCBVSRVUAVStartGPUHandleForLights);
+	pCommandList->SetGraphicsRootDescriptorTable
+	(
+		MAIN_LIGHT,
+		CD3DX12_GPU_DESCRIPTOR_HANDLE
+		(
+			m_descriptorHeapCBVSRVUAVStartGPUHandleForLights,
+			CurrentFrameResourceIndex() * static_cast<unsigned int>(m_workloadLights.size()),
+			m_descriptorHeapCBVSRVUAVIncrementSize
+		)
+	);
 
-	m_commandList->SetGraphicsRootDescriptorTable(MAIN_SHADOW, m_descriptorHeapCBVSRVUAVStartGPUHandleForShadows);
+	pCommandList->SetGraphicsRootDescriptorTable
+	(
+		MAIN_SHADOW,
+		m_descriptorHeapCBVSRVUAVStartGPUHandleForShadows
+	);
 
 	//NOTE: 오브젝트를 중심으로 순회하는 반복문을 임시로 사용함
 	for (const auto& [name, object] : m_workloadObjects)
 	{
-		m_commandList->SetGraphicsRootDescriptorTable(MAIN_OBJECT, object.GetConstantBufferViewGPUHandle());
+		pCommandList->SetGraphicsRootDescriptorTable(MAIN_OBJECT, object.GetConstantBufferViewGPUHandle(CurrentFrameResourceIndex()));
 
 		const Asset* pAsset = object.GetAssetPtr();
 
 		const Material* pMaterial = pAsset->GetMaterial();
-		m_commandList->SetGraphicsRootDescriptorTable(MAIN_MATERIAL, pMaterial->GetConstantBufferViewGPUHandle());
+		pCommandList->SetGraphicsRootDescriptorTable(MAIN_MATERIAL, pMaterial->GetCBVLocationGPUHandle(CurrentFrameResourceIndex()));
 
 		const Texture* pTexture = pMaterial->GetTexturePtr();
-		m_commandList->SetGraphicsRootDescriptorTable(MAIN_TEXTURE, pTexture->GetShaderResourceViewGPUHandle());
+		pCommandList->SetGraphicsRootDescriptorTable(MAIN_TEXTURE, pTexture->GetShaderResourceViewGPUHandle());
 
 		const Mesh* pMesh = pAsset->GetMesh();
-		m_commandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
-		m_commandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
+		pCommandList->IASetVertexBuffers(0, 1, pMesh->GetVertexBufferView());
+		pCommandList->IASetIndexBuffer(pMesh->GetIndexBufferView());
 
-		m_commandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
+		pCommandList->DrawIndexedInstanced(pMesh->GetIndexCount(), 1, 0, 0, 0);
 	}
 }
 
@@ -440,7 +508,7 @@ void Podo::UpdateGUI()
 	}
 
 	ImGui::Render();
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_commandList.Get());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_pCommandLists[CurrentFrameResourceIndex()].Get());
 }
 
 void Podo::UpdatePrepareStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPos)
@@ -558,9 +626,16 @@ void Podo::UpdateRunStateGUI(ImGuiViewport* pImGuiViewPort, ImVec2 imGuiCenterPo
 		m_needResetFactory				= true;
 		m_needResetDevice				= true;
 		m_needResetSwapChain			= true;
-		m_needResetWorkloads				= true;
+		m_needResetWorkloads			= true;
 		m_needResetRenderSceneConfigure	= true;
 	}
 
 	ImGui::End();
+}
+
+void Podo::UpdateSetFence()
+{
+	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceCurrent));
+
+	m_fenceCurrent++;
 }

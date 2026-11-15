@@ -41,10 +41,19 @@ public:
 	//NOTE: 의도치 않은 얕은 복사나 참조 증가가 일어나지 않도록 복사를 금지함
 	Light(const Light& sourceLight) = delete;
 	Light& operator=(const Light& sourceLight) = delete;
-
-	void Create(ID3D12Device* pDevice, bool isShadowOn = false, unsigned int shadowWidth = 1024, unsigned int shadowHeight = 1024)
+	
+	//NOTE: isShadowOn이 frameResourceNum으로 해석될 위험이 있어, 기본 인자를 사용하지 않음
+	void Create(ID3D12Device* pDevice, unsigned int frameResourceNum, bool isShadowOn, unsigned int shadowWidth, unsigned int shadowHeight)
 	{
 		m_upShadow.reset();
+
+		m_frameResourceNum	= frameResourceNum;
+		m_pDirtyFlags		= std::make_unique<bool[]>(frameResourceNum);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 
 		m_isShadowOn = isShadowOn;
 		if (isShadowOn == true)
@@ -54,9 +63,9 @@ public:
 			m_upShadow->Create(pDevice, shadowWidth, shadowHeight);
 		}
 
-		constexpr unsigned int	constantBufferSize	= (sizeof(LightBuffer) + 255) & ~255;
-		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		unsigned int			resourceSize	= frameResourceNum * frameResourceSize;
+		D3D12_HEAP_PROPERTIES	heapProperties	= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		D3D12_RESOURCE_DESC		resourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(resourceSize);
 
 		ThrowIfFailed
 		(
@@ -71,23 +80,43 @@ public:
 			)
 		);
 
-		UpdateBuffer();
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
+		{
+			CheckAndUpdateFrameResource(frameResourceIndex);
+		}
+
+		m_pCBVLocationGPUHandles = std::make_unique<D3D12_GPU_DESCRIPTOR_HANDLE[]>(frameResourceNum);
 	}
 
 	void SetStrength(DirectX::XMFLOAT3 strength)
 	{
 		m_strength = strength;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	//NOTE: 위치나 방향에 관한 매개변수는 호출부에서 SIMD 연산을 한 뒤 전달하기 편하도록 XMVECTOR 타입으로 둠
 	void XM_CALLCONV SetDirection(DirectX::FXMVECTOR lookDirection)
 	{
 		DirectX::XMStoreFloat3(&m_direction, lookDirection);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	void SetViewVolume(float width, float height, float nearZ, float farZ)
@@ -96,42 +125,56 @@ public:
 		m_height	= height;
 		m_nearZ		= nearZ;
 		m_farZ		= farZ;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	//NOTE: m_direction이 영벡터에 가깝다면 임의로 아래를 바라보게 하고, m_direction이 Z축과 평행하다면 임의로 Y축을 upDirection으로 삼음
-	void UpdateBuffer()
+	void CheckAndUpdateFrameResource(unsigned int frameResourceIndex)
 	{
-		DirectX::XMVECTOR position		= DirectX::XMLoadFloat3(&m_position);
-		DirectX::XMVECTOR lookDirection	= DirectX::XMLoadFloat3(&m_direction);
-		DirectX::XMVECTOR upDirection	= DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-
-		if (IsNearZero(lookDirection) == true)
+		if (m_pDirtyFlags[frameResourceIndex] == true)
 		{
-			lookDirection = DirectX::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+			DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&m_position);
+			DirectX::XMVECTOR lookDirection = DirectX::XMLoadFloat3(&m_direction);
+			DirectX::XMVECTOR upDirection = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+
+			if (IsNearZero(lookDirection) == true)
+			{
+				lookDirection = DirectX::XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f);
+			}
+
+			if (IsNearParallel(lookDirection, upDirection) == true)
+			{
+				upDirection = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			}
+
+			DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookToLH(position, lookDirection, upDirection);
+			DirectX::XMMATRIX orthoProjMatrix = DirectX::XMMatrixOrthographicLH(m_width, m_height, m_nearZ, m_farZ);
+
+			DirectX::XMMATRIX orthoViewProjMatrix = viewMatrix * orthoProjMatrix;
+
+			LightBuffer lightFrameResourceData = {};
+			lightFrameResourceData.isShadowOn = m_isShadowOn;
+			lightFrameResourceData.strength = m_strength;
+			lightFrameResourceData.direction = m_direction;
+			DirectX::XMStoreFloat4x4(&lightFrameResourceData.orthoViewProj, XMMatrixTranspose(orthoViewProjMatrix));
+
+			unsigned int offset = frameResourceIndex * frameResourceSize;
+
+			void* pMappedData = nullptr;
+			D3D12_RANGE readRange = { 0, 0 };
+			ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
+
+			std::memcpy(static_cast<std::uint8_t*>(pMappedData) + offset, &lightFrameResourceData, sizeof(LightBuffer));
+
+			D3D12_RANGE writtenRange = { offset, offset + frameResourceSize };
+			m_resource->Unmap(0, &writtenRange);
+
+			m_pDirtyFlags[frameResourceIndex] = false;
 		}
-
-		if (IsNearParallel(lookDirection, upDirection) == true)
-		{
-			upDirection = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		}
-
-		DirectX::XMMATRIX viewMatrix		= DirectX::XMMatrixLookToLH(position, lookDirection, upDirection);
-		DirectX::XMMATRIX orthoProjMatrix	= DirectX::XMMatrixOrthographicLH(m_width, m_height, m_nearZ, m_farZ);
-
-		DirectX::XMMATRIX orthoViewProjMatrix = viewMatrix * orthoProjMatrix;
-
-		LightBuffer lightConstantBufferData	= {};
-		lightConstantBufferData.isShadowOn	= m_isShadowOn;
-		lightConstantBufferData.strength	= m_strength;
-		lightConstantBufferData.direction	= m_direction;
-		DirectX::XMStoreFloat4x4(&lightConstantBufferData.orthoViewProj, XMMatrixTranspose(orthoViewProjMatrix));
-
-		void* pMappedData = nullptr;
-		D3D12_RANGE readRange = { 0, 0 };
-
-		ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
-		std::memcpy(pMappedData, &lightConstantBufferData, sizeof(lightConstantBufferData));
-		m_resource->Unmap(0, nullptr);
 	}
 
 	bool GetIsShadowOn() const
@@ -144,27 +187,34 @@ public:
 		return m_upShadow.get();
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress(unsigned int frameResourceIndex) const
 	{
-		return m_resource->GetGPUVirtualAddress();
+		return m_resource->GetGPUVirtualAddress() + static_cast<D3D12_GPU_VIRTUAL_ADDRESS>(frameResourceIndex) * frameResourceSize;
 	}
 
 	unsigned int GetResourceWidth() const
 	{
-		return static_cast<unsigned int>(m_resource->GetDesc().Width);
+		return frameResourceSize;
 	}
 
-	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+	void SetCBVLocationGPUHandle(unsigned int frameResourceIndex, D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_constantBufferViewGPUHandle = handle;
+		m_pCBVLocationGPUHandles[frameResourceIndex] = handle;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
+	D3D12_GPU_DESCRIPTOR_HANDLE GetCBVLocationGPUHandle(unsigned int frameResourceIndex) const
 	{
-		return m_constantBufferViewGPUHandle;
+		return m_pCBVLocationGPUHandles[frameResourceIndex];
 	}
 
 private:
+
+	static constexpr unsigned int frameResourceSize = (sizeof(LightBuffer) + 255) & ~255;
+
+private:
+
+	unsigned int m_frameResourceNum			= {};
+	std::unique_ptr<bool[]> m_pDirtyFlags	= {};
 
 	bool					m_isShadowOn	= {};
 	std::unique_ptr<Shadow>	m_upShadow		= {};
@@ -179,5 +229,5 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
-	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferViewGPUHandle = {};
+	std::unique_ptr<D3D12_GPU_DESCRIPTOR_HANDLE[]> m_pCBVLocationGPUHandles = {};
 };

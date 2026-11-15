@@ -15,7 +15,9 @@
 #include <DirectXMath.h>
 
 //C++
+#include <memory>
 #include <cstring>
+#include <cstdint>
 
 struct ObjectBuffer
 {
@@ -36,11 +38,19 @@ public:
 	Object(const Object& sourceObject) = delete;
 	Object& operator=(const Object& sourceObject) = delete;
 
-	void Create(ID3D12Device* pDevice)
+	void Create(ID3D12Device* pDevice, unsigned int frameResourceNum)
 	{
-		constexpr unsigned int	constantBufferSize	= (sizeof(ObjectBuffer) + 255) & ~255;
-		D3D12_HEAP_PROPERTIES	heapProperties		= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		D3D12_RESOURCE_DESC		resourceDesc		= CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize);
+		m_frameResourceNum	= frameResourceNum;
+		m_pDirtyFlags		= std::make_unique<bool[]>(frameResourceNum);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
+
+		unsigned int			resourceSize	= frameResourceNum * frameResourceSize;
+		D3D12_HEAP_PROPERTIES	heapProperties	= CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		D3D12_RESOURCE_DESC		resourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(resourceSize);
 
 		ThrowIfFailed
 		(
@@ -55,7 +65,12 @@ public:
 			)
 		);
 
-		UpdateBuffer();
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < frameResourceNum; frameResourceIndex++)
+		{
+			CheckAndUpdateFrameResource(frameResourceIndex);
+		}
+
+		m_pCBVLocationGPUHandles = std::make_unique<D3D12_GPU_DESCRIPTOR_HANDLE[]>(frameResourceNum);
 	}
 
 	void SetAssetPtr(Asset* pAsset)
@@ -67,6 +82,11 @@ public:
 	void XM_CALLCONV SetPosition(DirectX::FXMVECTOR position)
 	{
 		DirectX::XMStoreFloat3(&m_position, position);
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
 	//NOTE: lookDirection이나 upDirection이 영벡터에 가깝거나, 서로 평행에 가까우면 회전을 설정하지 않고 false를 리턴함
@@ -93,37 +113,56 @@ public:
 
 		DirectX::XMStoreFloat4(&m_rotation, rotationQuaternion);
 
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
+
 		return true;
 	}
 
 	void SetScale(DirectX::XMFLOAT3 scale)
 	{
 		m_scale = scale;
+
+		for (unsigned int frameResourceIndex = 0; frameResourceIndex < m_frameResourceNum; frameResourceIndex++)
+		{
+			m_pDirtyFlags[frameResourceIndex] = true;
+		}
 	}
 
-	void UpdateBuffer()
+	void CheckAndUpdateFrameResource(unsigned int frameResourceIndex)
 	{
-		DirectX::XMVECTOR direction	= DirectX::XMLoadFloat4(&m_rotation);
-		DirectX::XMVECTOR scale		= DirectX::XMLoadFloat3(&m_scale);
-		DirectX::XMVECTOR position	= DirectX::XMLoadFloat3(&m_position);
+		if (m_pDirtyFlags[frameResourceIndex] == true)
+		{
+			DirectX::XMVECTOR direction = DirectX::XMLoadFloat4(&m_rotation);
+			DirectX::XMVECTOR scale = DirectX::XMLoadFloat3(&m_scale);
+			DirectX::XMVECTOR position = DirectX::XMLoadFloat3(&m_position);
 
-		DirectX::XMMATRIX worldMatrix =
-			DirectX::XMMatrixScalingFromVector(scale) *
-			DirectX::XMMatrixRotationQuaternion(direction) *
-			DirectX::XMMatrixTranslationFromVector(position);
+			DirectX::XMMATRIX worldMatrix =
+				DirectX::XMMatrixScalingFromVector(scale) *
+				DirectX::XMMatrixRotationQuaternion(direction) *
+				DirectX::XMMatrixTranslationFromVector(position);
 
-		DirectX::XMMATRIX worldInvMatrix = XMMatrixInverse(nullptr, worldMatrix);
+			DirectX::XMMATRIX worldInvMatrix = XMMatrixInverse(nullptr, worldMatrix);
 
-		ObjectBuffer objectConstantBufferData = {};
-		XMStoreFloat4x4(&objectConstantBufferData.world, XMMatrixTranspose(worldMatrix));
-		XMStoreFloat4x4(&objectConstantBufferData.invTransWorld, worldInvMatrix);
+			ObjectBuffer objectFrameResourceData = {};
+			XMStoreFloat4x4(&objectFrameResourceData.world, XMMatrixTranspose(worldMatrix));
+			XMStoreFloat4x4(&objectFrameResourceData.invTransWorld, worldInvMatrix);
 
-		void* pMappedData		= nullptr;
-		D3D12_RANGE readRange	= { 0, 0 };
+			unsigned int offset = frameResourceIndex * frameResourceSize;
 
-		ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
-		std::memcpy(pMappedData, &objectConstantBufferData, sizeof(objectConstantBufferData));
-		m_resource->Unmap(0, nullptr);
+			void* pMappedData = nullptr;
+			D3D12_RANGE readRange = { 0, 0 };
+			ThrowIfFailed(m_resource->Map(0, &readRange, &pMappedData));
+
+			std::memcpy(static_cast<std::uint8_t*>(pMappedData) + offset, &objectFrameResourceData, sizeof(ObjectBuffer));
+
+			D3D12_RANGE writtenRange = { offset, offset + frameResourceSize };
+			m_resource->Unmap(0, &writtenRange);
+
+			m_pDirtyFlags[frameResourceIndex] = false;
+		}
 	}
 
 	Asset* GetAssetPtr() const
@@ -131,27 +170,34 @@ public:
 		return m_pAsset;
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress() const
+	D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUAddress(unsigned int frameResourceIndex) const
 	{
-		return m_resource->GetGPUVirtualAddress();
+		return m_resource->GetGPUVirtualAddress() + static_cast<D3D12_GPU_VIRTUAL_ADDRESS>(frameResourceIndex) * frameResourceSize;
 	}
 	
 	unsigned int GetResourceWidth() const
 	{
-		return static_cast<unsigned int>(m_resource->GetDesc().Width);
+		return frameResourceSize;
 	}
 
-	void SetConstantBufferViewGPUHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+	void SetConstantBufferViewGPUHandle(unsigned int frameResourceIndex, D3D12_GPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_constantBufferViewGPUHandle = handle;
+		m_pCBVLocationGPUHandles[frameResourceIndex] = handle;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle() const
+	D3D12_GPU_DESCRIPTOR_HANDLE GetConstantBufferViewGPUHandle(unsigned int frameResourceIndex) const
 	{
-		return m_constantBufferViewGPUHandle;
+		return m_pCBVLocationGPUHandles[frameResourceIndex];
 	}
 
 private:
+
+	static constexpr unsigned int frameResourceSize = (sizeof(ObjectBuffer) + 255) & ~255;
+
+private:
+
+	unsigned int m_frameResourceNum			= {};
+	std::unique_ptr<bool[]> m_pDirtyFlags	= {};
 
 	Asset*	m_pAsset = {};
 
@@ -161,5 +207,5 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = {};
 
-	D3D12_GPU_DESCRIPTOR_HANDLE m_constantBufferViewGPUHandle = {};
+	std::unique_ptr<D3D12_GPU_DESCRIPTOR_HANDLE[]> m_pCBVLocationGPUHandles = {};
 };

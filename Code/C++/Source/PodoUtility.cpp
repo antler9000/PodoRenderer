@@ -19,8 +19,6 @@ void Podo::FlushCommandQueue()
 		return;
 	}
 
-	m_fenceCurrent++;
-
 	ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceCurrent));
 	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceCurrent, m_fenceEvent));
 
@@ -29,6 +27,8 @@ void Podo::FlushCommandQueue()
 	{
 		Throw("wait fence failed");
 	}
+
+	m_fenceCurrent++;
 }
 
 void Podo::OptionSave()
